@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>太空冒险 - 豆包不是干粮</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        /* 导航栏样式 */
+        .header {
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 60px;
+        }
+
+        .nav-list {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+        }
+
+        .nav-item a {
+            text-decoration: none;
+            color: #333;
+            font-size: 16px;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-item a:hover {
+            color: #ff6b6b;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 80px auto 0;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: #fff;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .game-title {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 24px;
+        }
+
+        .game-frame {
+            width: 100%;
+            height: 600px;
+            border: none;
+            margin-bottom: 20px;
+        }
+
+        .game-description {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .game-controls {
+            margin-bottom: 20px;
+        }
+
+        .control-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .control-list {
+            list-style: none;
+        }
+
+        .control-list li {
+            margin-bottom: 8px;
+            color: #666;
+        }
+
+        /* 页脚样式 */
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px 0;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .social-links a {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: #fff;
+            transition: transform 0.3s;
+        }
+
+        .social-links a:hover {
+            transform: scale(1.1);
+        }
+
+        .social-links img {
+            width: 24px;
+            height: 24px;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <ul class="nav-list">
+                <li class="nav-item"><a href="../index.html">首页</a></li>
+                <li class="nav-item"><a href="../scratch-learning.html">Scratch游戏</a></li>
+                <li class="nav-item"><a href="../my-music.html">音乐</a></li>
+                <li class="nav-item"><a href="../my-artworks.html">画作</a></li>
+                <li class="nav-item"><a href="../xiaohongshu.html">我的小红书</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="game-container">
+            <h1 class="game-title">太空冒险</h1>
+            <iframe src="https://scratch.mit.edu/projects/embed/123456789" class="game-frame" allowtransparency="true" frameborder="0" scrolling="no" allowfullscreen></iframe>
+            
+            <div class="game-description">
+                <p>在这个太空冒险游戏中，你将驾驶宇宙飞船探索浩瀚的宇宙。收集星星增加得分，躲避陨石保护飞船。看看你能获得多少分数！</p>
+            </div>
+
+            <div class="game-controls">
+                <h3 class="control-title">游戏操作说明：</h3>
+                <ul class="control-list">
+                    <li>↑ 向上飞行</li>
+                    <li>↓ 向下飞行</li>
+                    <li>← 向左移动</li>
+                    <li>→ 向右移动</li>
+                    <li>空格键 发射激光</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="social-links">
+            <a href="#wechat"><img src="../images/wechat.png" alt="微信"></a>
+            <a href="#douyin"><img src="../images/douyin.png" alt="抖音"></a>
+            <a href="https://www.xiaohongshu.com/user/profile/5a05ba304eacab66328dba67" target="_blank">
+                <img src="../images/xiaohongshu.png" alt="小红书">
+            </a>
+        </div>
+        <p>© 2024 豆包不是干粮. All rights reserved.</p>
+    </footer>
+</body>
+</html> 
