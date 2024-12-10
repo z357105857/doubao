@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>豆包在路上的个人主页</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <header>
+        <h1 class="site-title">豆包在路上</h1>
+        <nav class="top-nav">
+            <ul>
+                <li><a href="#" class="active">首页</a></li>
+                <li><a href="#about">关于我</a></li>
+                <li><a href="#drawings">我的画画</a></li>
+                <li><a href="#songs">我的歌唱</a></li>
+                <li><a href="#games">我的游戏</a></li>
+                <li><a href="#xiaohongshu">小红书</a></li>
+                <li><a href="#contact">联系我</a></li>
+            </ul>
+        </nav>
+        <button class="menu-toggle" aria-label="菜单">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </header>
+
+    <!-- 导航菜单 -->
+    <nav class="main-nav">
+        <ul>
+            <li><a href="#" class="active">首页</a></li>
+            <li><a href="#about">关于我</a></li>
+            <li><a href="#drawings">我的画画</a></li>
+            <li><a href="#songs">我的歌唱</a></li>
+            <li><a href="#games">我的游戏</a></li>
+            <li><a href="#xiaohongshu">我的小红书</a></li>
+            <li><a href="#contact">联系我</a></li>
+        </ul>
+    </nav>
+
+    <!-- 照片轮播 -->
+    <div class="carousel">
+        <div class="carousel-container">
+            <img src="https://img.freepik.com/free-photo/happy-asian-child-student-learning-drawing_7861-1103.jpg" alt="画画时光" class="active">
+            <img src="https://img.freepik.com/free-photo/asian-children-students-learning-classroom_1150-5524.jpg" alt="学习时光">
+            <img src="https://img.freepik.com/free-photo/little-asian-boy-girl-doing-homework_1150-5514.jpg" alt="做作业">
+            <img src="https://img.freepik.com/free-photo/asian-children-playing-playground_1150-5520.jpg" alt="玩耍时光">
+            <img src="https://img.freepik.com/free-photo/asian-children-playing-park_1150-5523.jpg" alt="课外活动">
+        </div>
+        <div class="carousel-controls">
+            <button class="carousel-prev" aria-label="上一张">←</button>
+            <button class="carousel-play-pause" aria-label="播放/暂停">
+                <span class="play-icon">▶</span>
+                <span class="pause-icon">⏸</span>
+            </button>
+            <button class="carousel-next" aria-label="下一张">→</button>
+        </div>
+        <div class="carousel-info">
+            <span class="carousel-counter">1/5</span>
+            <span class="carousel-description">画画时光</span>
+        </div>
+    </div>
+
+    <!-- 个人简介 -->
+    <section id="about" class="about-section">
+        <div class="profile-image">
+            <img src="https://picsum.photos/200/200?random=4" alt="豆包在路上的照片">
+        </div>
+        <div class="profile-text">
+            <h2>关于我</h2>
+            <div id="about-content">
+                <!-- 个人简介内容将通过 JavaScript 动态加载 -->
+            </div>
+        </div>
+    </section>
+
+    <!-- 我的画画作品 -->
+    <section id="drawings" class="section-container">
+        <h2 class="section-title">🎨 我的画画作品</h2>
+        <div class="gallery">
+            <div class="gallery-item" onclick="showArtwork(0)">
+                <img src="https://picsum.photos/300/300?random=5" alt="我画的小狗">
+                <p>可爱的小狗</p>
+            </div>
+            <div class="gallery-item" onclick="showArtwork(1)">
+                <img src="https://picsum.photos/300/300?random=6" alt="美丽的彩虹">
+                <p>七彩彩虹</p>
+            </div>
+            <div class="gallery-item" onclick="showArtwork(2)">
+                <img src="https://picsum.photos/300/300?random=7" alt="我的家人">
+                <p>我和家人</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 添加弹窗 -->
+    <div id="artwork-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <img id="modal-image" src="" alt="画作大图">
+            <div class="artwork-details">
+                <h3 id="modal-title"></h3>
+                <p id="modal-description"></p>
+                <p id="modal-date"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 我的歌曲集 -->
+    <section id="songs" class="section-container">
+        <h2 class="section-title">🎵 我的歌曲集</h2>
+        <div class="music-player">
+            <div class="song-item">
+                <div class="now-playing">
+                    <h3 id="current-song-title">选择歌曲开始播放</h3>
+                    <audio id="audio-player" controls>
+                        <source src="" type="audio/mpeg">
+                        你的浏览器不支持音频播放。
+                    </audio>
+                </div>
+                <div class="playlist">
+                    <h4>播放列表</h4>
+                    <ul id="song-list">
+                        <li data-src="audio/1.MP3" onclick="playSong(0)">
+                            第一首歌
+                        </li>
+                        <li data-src="audio/2.mp3" onclick="playSong(1)">
+                            第二首歌
+                        </li>
+                        <li data-src="audio/3.mp3" onclick="playSong(2)">
+                            第三首歌
+                        </li>
+                        <li data-src="audio/4.mp3" onclick="playSong(3)">
+                            第四首歌
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 我的游戏 -->
+    <section id="games" class="section-container">
+        <h2 class="section-title">🎮 我的游戏</h2>
+        <div class="games-container">
+            <div class="game-item">
+                <h3>猜数字游戏</h3>
+                <div class="game-box" id="number-game">
+                    <input type="number" id="guess-input" placeholder="输入1-100的数字">
+                    <button onclick="guessNumber()">猜一猜</button>
+                    <p id="guess-result"></p>
+                </div>
+            </div>
+            <div class="game-item">
+                <h3>记忆卡片</h3>
+                <div class="memory-game" id="memory-game">
+                    <!-- 游戏卡片将通过 JavaScript 动态生成 -->
+                </div>
+                <button onclick="startMemoryGame()">开始游戏</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 小红书笔记预览 -->
+    <section id="xiaohongshu" class="section-container">
+        <h2 class="section-title">📱 我的小红书</h2>
+        <div class="xhs-container">
+            <div class="xhs-profile">
+                <img src="https://picsum.photos/60/60?random=20" alt="豆包在路上" class="xhs-avatar">
+                <div class="xhs-info">
+                    <h3>豆包在路上</h3>
+                    <p>小红书号：497243246</p>
+                    <p>✨家有一年级萌宝一枚。 💖专注分享亲子游、徒步、露营和育儿经验，体验多彩亲子时光。</p>
+                </div>
+            </div>
+            
+            <div class="xhs-notes">
+                <a href="https://www.xiaohongshu.com/user/profile/5a05ba304eacab66328dba67" class="xhs-note" target="_blank">
+                    <img src="https://picsum.photos/400/300?random=21" alt="兰州也有宝藏美术馆">
+                    <div class="note-info">
+                        <h4>兰州也有宝藏美术馆 | 亲子艺术之旅 ✨</h4>
+                        <p class="note-likes">豆包在路上 7赞</p>
+                    </div>
+                </a>
+                
+                <a href="https://www.xiaohongshu.com/user/profile/5a05ba304eacab66328dba67" class="xhs-note" target="_blank">
+                    <img src="https://picsum.photos/400/300?random=22" alt="支气管病毒肆虐">
+                    <div class="note-info">
+                        <h4>😫2024 支气管病毒肆虐 | 宝宝抗病全记录</h4>
+                        <p class="note-likes">豆包在路上 9赞</p>
+                    </div>
+                </a>
+                
+                <a href="https://www.xiaohongshu.com/user/profile/5a05ba304eacab66328dba67" class="xhs-note" target="_blank">
+                    <img src="https://picsum.photos/400/300?random=23" alt="兰州周边亲子户外">
+                    <div class="note-info">
+                        <h4>兰州周边＂小瑞士＂| 周末遛娃宝藏露营地</h4>
+                        <p class="note-likes">豆包在路上 10+赞</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 社交媒体链接 -->
+    <footer id="contact">
+        <div class="social-links">
+            <a href="weixin://qr/你的微信二维码链接" class="social-icon wechat" aria-label="微信"></a>
+            <a href="https://weibo.com/你的微博主页" class="social-icon weibo" aria-label="微博"></a>
+            <a href="https://www.douyin.com/user/你的抖音主页" class="social-icon douyin" aria-label="抖音"></a>
+            <a href="https://www.linkedin.com/in/你的领英主页" class="social-icon linkedin" aria-label="领英"></a>
+        </div>
+        <p class="social-text">欢迎和我做朋友！</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html> 
