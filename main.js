@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
         themeIcon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
     }
 
-    // 加载动���
+    // 加载动
     window.addEventListener('load', () => {
         const loader = document.querySelector('.loader');
         requestAnimationFrame(() => {
@@ -213,4 +213,15 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.add('loaded');
         });
     }
+
+    // 游戏链接处理
+    const gameLinks = document.querySelectorAll('.game-link');
+    
+    gameLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const gameUrl = this.getAttribute('href');
+            window.open(gameUrl, '_blank', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');
+        });
+    });
 });
