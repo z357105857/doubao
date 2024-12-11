@@ -26,14 +26,16 @@
         <nav class="nav">
             <div class="logo">
                 <a href="#home">
-                    <img src="images/logo.png" alt="豆包不是干粮">
+                    <img src="images/dbLogo.png" alt="豆包不是干粮">
+                    <span class="logo-text">豆包不是干粮</span>
                 </a>
             </div>
             <ul class="nav-list">
                 <li class="nav-item"><a href="#home">首页</a></li>
+                <li class="nav-item"><a href="#about">关于我</a></li>
                 <li class="nav-item"><a href="#games">Scratch游戏</a></li>
-                <li class="nav-item"><a href="#music">音乐</a></li>
-                <li class="nav-item"><a href="#artworks">画作</a></li>
+                <li class="nav-item"><a href="#music">我的音乐</a></li>
+                <li class="nav-item"><a href="#artworks">我的画作</a></li>
                 <li class="nav-item"><a href="#xiaohongshu">我的小红书</a></li>
             </ul>
         </nav>
@@ -44,18 +46,53 @@
         <div class="swiper">
             <div class="swiper-wrapper">
                 <div class="swiper-slide">
-                    <img src="https://picsum.photos/1200/500?random=1" alt="画作1">
+                    <img src="images/slides/轮播图1.jpg" alt="轮播图1" loading="eager">
                 </div>
                 <div class="swiper-slide">
-                    <img src="https://picsum.photos/1200/500?random=2" alt="画作2">
+                    <img src="images/slides/轮播图2.jpg" alt="轮播图2" loading="lazy">
                 </div>
                 <div class="swiper-slide">
-                    <img src="https://picsum.photos/1200/500?random=3" alt="画作3">
+                    <img src="images/slides/轮播图3.jpg" alt="轮播图3" loading="lazy">
                 </div>
             </div>
             <div class="swiper-pagination"></div>
             <div class="swiper-button-next"></div>
             <div class="swiper-button-prev"></div>
+        </div>
+    </section>
+
+    <!-- 关于我 -->
+    <section id="about" class="section" role="region" aria-labelledby="about-title">
+        <div class="container">
+            <h2 id="about-title" class="section-title">关于我</h2>
+            <div class="about-me">
+                <div class="about-header">
+                    <div class="avatar">
+                        <img src="images/dbLogo.png" alt="豆包的头像">
+                    </div>
+                    <div class="about-info">
+                        <h3>豆包不是干粮</h3>
+                        <p class="about-desc">
+                            大家好，我是豆包！一个热爱创作的小朋友。我喜欢画画、玩Scratch编程、听音乐和旅行。
+                            在这里，我会分享我的创作和生活的点滴。希望通过我的作品，能给大家带来快乐！
+                        </p>
+                        <div class="about-social">
+                            <a href="#wechat" class="social-icon">
+                                <img src="https://api.iconify.design/simple-icons:wechat.svg?color=%2307C160" alt="微信">
+                                <span>关注我的微信</span>
+                            </a>
+                            <a href="#douyin" class="social-icon">
+                                <img src="https://api.iconify.design/simple-icons:tiktok.svg?color=%23000000" alt="抖音">
+                                <span>关注我的抖音</span>
+                            </a>
+                            <a href="https://www.xiaohongshu.com/user/profile/5a05ba304eacab66328dba67" target="_blank" class="social-icon">
+                                <img src="https://api.iconify.design/simple-icons:xiaohongshu.svg?color=%23FF2442" alt="小红书">
+                                <span>关注我的小红书</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -73,7 +110,7 @@
                     </div>
                 </div>
                 <div class="game-card">
-                    <img src="https://picsum.photos/300/200?random=5" alt="游戏2" class="game-thumbnail">
+                    <img src="images/games/game2.jpg" alt="游戏2" class="game-thumbnail">
                     <div class="game-info">
                         <h3 class="game-title">海底寻宝</h3>
                         <p class="game-description">潜入深海，寻找珍贵的宝藏，但要小心危险的海洋生物！</p>
@@ -81,9 +118,9 @@
                     </div>
                 </div>
                 <div class="game-card">
-                    <img src="https://picsum.photos/300/200?random=6" alt="游戏3" class="game-thumbnail">
+                    <img src="images/games/game3.jpg" alt="游戏3" class="game-thumbnail">
                     <div class="game-info">
-                        <h3 class="game-title">森林历险</h3>
+                        <h3 class="game-title">森林历</h3>
                         <p class="game-description">在神秘的森林中冒险，解开谜题，帮助小动物们完成任务！</p>
                         <a href="https://scratch.mit.edu/projects/345678901" target="_blank" class="play-button">开始游戏</a>
                     </div>
@@ -99,28 +136,31 @@
             <div class="music-player">
                 <div class="audio-container">
                     <audio id="audio-player" controls>
-                        <source src="" type="audio/mpeg">
+                        <source src="musics/杨可爱 - 青城山下白素贞.mp3" type="audio/mpeg">
                     </audio>
                 </div>
                 <ul class="playlist">
-                    <li class="playlist-item" data-src="music/song1.mp3">
+                    <li class="playlist-item" data-src="musics/杨可爱 - 青城山下白素贞.mp3">
                         <span class="song-number">01</span>
                         <div class="song-info">
-                            <div class="song-title">第一首歌</div>
+                            <div class="song-title">青城山下白素贞</div>
+                            <div class="song-artist">杨可爱</div>
                             <div class="song-duration">3:45</div>
                         </div>
                     </li>
-                    <li class="playlist-item" data-src="music/song2.mp3">
+                    <li class="playlist-item" data-src="musics/张小斐 - 萱草花.mp3">
                         <span class="song-number">02</span>
                         <div class="song-info">
-                            <div class="song-title">第二首歌</div>
+                            <div class="song-title">萱草花</div>
+                            <div class="song-artist">张小斐</div>
                             <div class="song-duration">4:20</div>
                         </div>
                     </li>
-                    <li class="playlist-item" data-src="music/song3.mp3">
+                    <li class="playlist-item" data-src="musics/周杰伦 - 听妈妈的话.mp3">
                         <span class="song-number">03</span>
                         <div class="song-info">
-                            <div class="song-title">第三首歌</div>
+                            <div class="song-title">听妈妈的话</div>
+                            <div class="song-artist">周杰伦</div>
                             <div class="song-duration">3:30</div>
                         </div>
                     </li>
@@ -134,17 +174,23 @@
         <div class="container">
             <h2 id="artworks-title" class="section-title">我的画作</h2>
             <div class="gallery">
-                <div class="artwork-card" data-image="https://picsum.photos/800/600?random=7">
-                    <img src="https://picsum.photos/300/200?random=7" alt="画作1" class="artwork-image">
+                <div class="artwork-card" data-image="images/artworks/artwork1.jpg">
+                    <img src="images/artworks/artwork1.jpg" alt="画作1" class="artwork-image">
                 </div>
-                <div class="artwork-card" data-image="https://picsum.photos/800/600?random=8">
-                    <img src="https://picsum.photos/300/200?random=8" alt="画作2" class="artwork-image">
+                <div class="artwork-card" data-image="images/artworks/artwork2.jpg">
+                    <img src="images/artworks/artwork2.jpg" alt="画作2" class="artwork-image">
                 </div>
-                <div class="artwork-card" data-image="https://picsum.photos/800/600?random=9">
-                    <img src="https://picsum.photos/300/200?random=9" alt="画作3" class="artwork-image">
+                <div class="artwork-card" data-image="images/artworks/artwork3.jpg">
+                    <img src="images/artworks/artwork3.jpg" alt="画作3" class="artwork-image">
                 </div>
-                <div class="artwork-card" data-image="https://picsum.photos/800/600?random=10">
-                    <img src="https://picsum.photos/300/200?random=10" alt="画作4" class="artwork-image">
+                <div class="artwork-card" data-image="images/artworks/artwork4.jpg">
+                    <img src="images/artworks/artwork4.jpg" alt="画作4" class="artwork-image">
+                </div>
+                <div class="artwork-card" data-image="images/artworks/artwork5.jpg">
+                    <img src="images/artworks/artwork5.jpg" alt="画作5" class="artwork-image">
+                </div>
+                <div class="artwork-card" data-image="images/artworks/artwork6.jpg">
+                    <img src="images/artworks/artwork6.jpg" alt="画作6" class="artwork-image">
                 </div>
             </div>
         </div>
@@ -190,6 +236,26 @@
     </div>
 
     <script src="https://cdn.bootcdn.net/ajax/libs/Swiper/10.0.0/swiper-bundle.min.js"></script>
+    <script>
+        window.addEventListener('load', function() {
+            // 轮播图初始化
+            new Swiper('.swiper', {
+                loop: true,
+                autoplay: {
+                    delay: 3000,
+                    disableOnInteraction: false,
+                },
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                },
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+            });
+        });
+    </script>
     <script src="main.js"></script>
 </body>
 </html> 
