@@ -3,6 +3,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const audioPlayer = document.getElementById('audio-player');
     const playlistItems = document.querySelectorAll('.playlist-item');
 
+    // 设置第一首歌为激活状态
+    if (playlistItems.length > 0) {
+        playlistItems[0].classList.add('active');
+    }
+
+    // 页面加载完成后自动播放
+    window.addEventListener('load', function() {
+        // 尝试自动播放
+        audioPlayer.play().catch(error => {
+            console.log('自动播放失败，需要用户交互:', error);
+            // 如果自动播放失败，监听用户的第一次点击事件
+            document.addEventListener('click', function startAudio() {
+                audioPlayer.play();
+                document.removeEventListener('click', startAudio);
+            }, { once: true });
+        });
+    });
+
     playlistItems.forEach(item => {
         item.addEventListener('click', function() {
             playlistItems.forEach(i => i.classList.remove('active'));
