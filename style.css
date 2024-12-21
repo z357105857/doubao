@@ -12,10 +12,10 @@
     --card-bg: #fff;              /* 卡片背景色 */
     --header-bg: #fff;            /* 头部背景色 */
     --shadow: rgba(0,0,0,0.1);    /* 阴影颜色 */
-    --hover-color: #ff6b6b;       /* 悬停颜色 */
+    --hover-color: #40B4A6;       /* 悬停颜色 */
     /* 新的背景样式 */
     --bg-gradient: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
-    --pattern-color: rgba(255, 107, 107, 0.04);
+    --pattern-color: rgba(64, 180, 166, 0.04);
     --card-bg-rgb: 255, 255, 255; /* 卡片背景RGB值 */
     --card-opacity: 0.95;         /* 卡片透明度 */
 }
@@ -27,10 +27,10 @@
     --card-bg: #2d2d2d;
     --header-bg: #2d2d2d;
     --shadow: rgba(255,255,255,0.1);
-    --hover-color: #ff8585;
+    --hover-color: #40B4A6;
     /* 暗色主题背景样式 */
     --bg-gradient: linear-gradient(135deg, #1a1a1a 0%, #242424 100%);
-    --pattern-color: rgba(255, 133, 133, 0.02);
+    --pattern-color: rgba(64, 180, 166, 0.02);
     --card-bg-rgb: 45, 45, 45;
     --card-opacity: 0.9;
 }
@@ -54,7 +54,7 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><path fill="%23ff6b6b" opacity="0.04" d="M40,20 A20,20 0 1,0 40,60 A20,20 0 1,0 40,20 M40,30 A10,10 0 1,1 40,50 A10,10 0 1,1 40,30 M20,10 A8,8 0 1,0 20,26 A8,8 0 1,0 20,10 M60,10 A8,8 0 1,0 60,26 A8,8 0 1,0 60,10"/></svg>');
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><path fill="%2340B4A6" opacity="0.04" d="M40,20 A20,20 0 1,0 40,60 A20,20 0 1,0 40,20 M40,30 A10,10 0 1,1 40,50 A10,10 0 1,1 40,30 M20,10 A8,8 0 1,0 20,26 A8,8 0 1,0 20,10 M60,10 A8,8 0 1,0 60,26 A8,8 0 1,0 60,10"/></svg>');
     background-repeat: repeat;
     background-size: 80px 80px;
     pointer-events: none;
@@ -89,7 +89,7 @@ body::before {
     height: 60px;
     max-width: 1200px;
     margin: 0 auto;
-    padding: 10px;
+    padding: 10px 20px;
     position: relative;
 }
 
@@ -137,17 +137,14 @@ body::before {
     display: flex;
     list-style: none;
     gap: 30px;
-    justify-content: center;
-    position: fixed;
-    top: 60px;
-    left: 0;
-    width: 100%;
-    background-color: rgba(var(--card-bg-rgb), var(--card-opacity));
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    padding: 10px;
-    box-shadow: 0 2px 5px var(--shadow);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    justify-content: flex-end;
+    position: relative;
+    top: 0;
+    width: auto;
+    background: none;
+    padding: 0;
+    box-shadow: none;
+    border: none;
 }
 
 .nav-item a {
@@ -233,7 +230,7 @@ body::before {
     display: block;
 }
 
-/* 轮播图导航按钮样式 */
+/* 轮播图导按钮样式 */
 .swiper-button-next,
 .swiper-button-prev {
     color: #fff;
@@ -582,7 +579,7 @@ audio {
 }
 
 .back-to-top:hover {
-    background: #ff5252;
+    background: #368F84;
     transform: translateY(-5px);
 }
 
@@ -739,19 +736,21 @@ audio {
         left: 0;
         width: 100%;
         padding: 0;
+        background: rgba(var(--card-bg-rgb), 0.98);
     }
 
     .nav {
-        grid-template-columns: 1fr;
+        grid-template-columns: auto;
         height: auto;
         padding: 10px 15px;
         max-width: 100%;
+        margin-bottom: 0;
     }
 
     .logo {
         margin: 0 auto;
         padding: 5px 0;
-        z-index: 2;
+        margin-bottom: 5px;
     }
 
     .logo img {
@@ -772,37 +771,32 @@ audio {
 
     .nav-list {
         position: relative;
-        top: 0;
-        left: 0;
-        width: 100%;
-        background: rgba(var(--card-bg-rgb), var(--card-opacity));
-        padding: 8px 15px;
-        box-shadow: 0 2px 5px var(--shadow);
         display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 10px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        margin-top: 10px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        padding: 8px;
+        background: rgba(var(--card-bg-rgb), 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        width: 100%;
     }
 
     .nav-item a {
-        font-size: 14px;
-        text-align: center;
+        font-size: 13px;
         padding: 8px 5px;
-        display: block;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        justify-content: center;
+        text-align: center;
     }
 
     /* 内容域调整 */
     #home.section {
-        padding-top: 0;
-        margin-top: 110px;
+        margin-top: 120px;
+        padding: 0;
     }
 
     .swiper {
-        height: 250px;
+        height: 200px;
         margin-top: 0;
         border-radius: 0;
     }
@@ -914,29 +908,28 @@ audio {
 }
 
 /* 平板电脑断点调整 */
-@media (max-width: 1024px) {
+@media (min-width: 769px) and (max-width: 1024px) {
     .nav {
         padding: 10px 20px;
-        height: auto;
-    }
-
-    .swiper {
-        height: 400px;
-        margin-top: 0;
-    }
-
-    #home.section {
-        margin-top: 120px;
     }
 
     .nav-list {
         position: relative;
-        top: 0;
-        padding: 10px 20px;
-        margin-top: 10px;
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 15px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 20px;
+        padding: 0;
+        background: none;
+        box-shadow: none;
+        border: none;
+    }
+
+    #home.section {
+        margin-top: 60px;
+    }
+
+    .swiper {
+        height: 350px;
     }
 }
 
