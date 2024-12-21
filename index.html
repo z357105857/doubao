@@ -4,9 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>豆包不是干粮</title>
-    <link href="https://cdn.bootcdn.net/ajax/libs/Swiper/10.0.0/swiper-bundle.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <meta name="description" content="豆包不是干粮的个人网站，展示原创Scratch游戏、绘画作品和音乐创作。一个热爱创作的小朋友，分享快乐和创意。">
+    <meta name="keywords" content="豆包不是干粮,少儿编程,Scratch游戏,儿童画作,儿童音乐,创意作品">
+    <meta name="author" content="豆包不是干粮">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://你的网站域名/">
+    <meta property="og:title" content="豆包不是干粮">
+    <meta property="og:description" content="豆包不是干粮的个人网站，展示原创Scratch游戏、绘画作品和音乐创作。一个热爱创作的小朋友，分享快乐和创意。">
+    <meta property="og:image" content="https://你的网站域名/images/dbLogo.png">
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://你的网站域名/">
+    <meta property="twitter:title" content="豆包不是干粮">
+    <meta property="twitter:description" content="豆包不是干粮的个人网站，展示原创Scratch游戏、绘画作品和音乐创作。一个热爱创作的小朋友，分享快乐和创意。">
+    <meta property="twitter:image" content="https://你的网站域名/images/dbLogo.png">
+    <meta name="baidu-site-verification" content="你的百度验证码">
+    <meta name="360-site-verification" content="你的360验证码">
+    <link rel="canonical" href="https://你的网站域名/">
+    <link rel="alternate" hreflang="zh-CN" href="https://你的网站域名/">
+    <link rel="preload" href="images/dbLogo.png" as="image">
+    <link rel="preload" href="images/slides/轮播图1.jpg" as="image">
+    <link href="https://cdn.bootcdn.net/ajax/libs/Swiper/10.0.0/swiper-bundle.min.css" rel="stylesheet" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" media="print" onload="this.media='all'" crossorigin="anonymous">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="style.css">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "豆包不是干粮",
+      "description": "豆包不是干粮的个人网站，展示原创Scratch游戏、绘画作品和音乐创作",
+      "url": "https://你的网站域名/",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://你的网站域名/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    <!-- DNS预解析和预连接 -->
+    <link rel="dns-prefetch" href="https://cdn.bootcdn.net">
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="https://api.iconify.design">
+    <link rel="preconnect" href="https://cdn.bootcdn.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://api.iconify.design" crossorigin>
+    <!-- 预加载关键资源 -->
+    <link rel="preload" href="images/dbLogo.png" as="image" type="image/png">
+    <link rel="preload" href="images/slides/轮播图1.jpg" as="image" type="image/jpeg">
+    <link rel="preload" href="style.css" as="style">
+    <link rel="preload" href="main.js" as="script">
+    <!-- 资源提示 -->
+    <link rel="preload" href="https://cdn.bootcdn.net/ajax/libs/Swiper/10.0.0/swiper-bundle.min.css" as="style">
+    <link rel="preload" href="https://cdn.bootcdn.net/ajax/libs/Swiper/10.0.0/swiper-bundle.min.js" as="script">
+    <!-- 缓存控制 -->
+    <meta http-equiv="Cache-Control" content="public, max-age=31536000">
 </head>
 <body>
     <div class="scroll-progress"></div>
@@ -15,28 +67,51 @@
         <i class="fas fa-moon"></i>
     </button>
 
-    <div class="loader">
-        <div class="loader-content">
-            <div class="loader-spinner"></div>
-            <div>加载中...</div>
-        </div>
-    </div>
-
     <header class="header">
         <nav class="nav">
             <div class="logo">
                 <a href="#home">
-                    <img src="images/dbLogo.png" alt="豆包不是干粮">
+                    <img src="images/dbLogo.png" alt="豆包的头像">
                     <span class="logo-text">豆包不是干粮</span>
                 </a>
             </div>
             <ul class="nav-list">
-                <li class="nav-item"><a href="#home">首页</a></li>
-                <li class="nav-item"><a href="#about">关于我</a></li>
-                <li class="nav-item"><a href="#games">Scratch游戏</a></li>
-                <li class="nav-item"><a href="#music">我的音乐</a></li>
-                <li class="nav-item"><a href="#artworks">我的画作</a></li>
-                <li class="nav-item"><a href="https://www.xiaohongshu.com/user/profile/5a05ba304eacab66328dba67" target="_blank">我的小红书</a></li>
+                <li class="nav-item">
+                    <a href="#home">
+                        <i class="fas fa-leaf nav-icon"></i>
+                        <span>首页</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#about">
+                        <i class="fas fa-seedling nav-icon"></i>
+                        <span>关于我</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#games">
+                        <i class="fas fa-tree nav-icon"></i>
+                        <span>Scratch游戏</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#artworks">
+                        <i class="fas fa-spa nav-icon"></i>
+                        <span>我的画作</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#music">
+                        <i class="fas fa-fan nav-icon"></i>
+                        <span>我的音乐</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="https://www.xiaohongshu.com/user/profile/5a05ba304eacab66328dba67" target="_blank">
+                        <i class="fas fa-feather nav-icon"></i>
+                        <span>我的小红书</span>
+                    </a>
+                </li>
             </ul>
         </nav>
     </header>
@@ -46,13 +121,10 @@
         <div class="swiper">
             <div class="swiper-wrapper">
                 <div class="swiper-slide">
-                    <img src="images/slides/轮播图1.jpg" alt="轮播图1" loading="eager">
+                    <img src="images/slides/轮播图1.jpg" alt="轮播图1">
                 </div>
                 <div class="swiper-slide">
-                    <img src="images/slides/轮播图2.jpg" alt="轮播图2" loading="lazy">
-                </div>
-                <div class="swiper-slide">
-                    <img src="images/slides/轮播图3.jpg" alt="轮播图3" loading="lazy">
+                    <img src="images/slides/轮播图2.jpg" alt="轮播图2">
                 </div>
             </div>
             <div class="swiper-pagination"></div>
@@ -129,6 +201,33 @@
         </div>
     </section>
 
+    <!-- 画作展示 -->
+    <section id="artworks" class="section" role="region" aria-labelledby="artworks-title">
+        <div class="container">
+            <h2 id="artworks-title" class="section-title">我的画作</h2>
+            <div class="gallery">
+                <div class="artwork-card" data-image="images/artworks/artwork1.jpg">
+                    <img src="images/artworks/artwork1.jpg" alt="画作1" class="artwork-image">
+                </div>
+                <div class="artwork-card" data-image="images/artworks/artwork2.jpg">
+                    <img src="images/artworks/artwork2.jpg" alt="画作2" class="artwork-image">
+                </div>
+                <div class="artwork-card" data-image="images/artworks/artwork3.jpg">
+                    <img src="images/artworks/artwork3.jpg" alt="画作3" class="artwork-image">
+                </div>
+                <div class="artwork-card" data-image="images/artworks/artwork4.jpg">
+                    <img src="images/artworks/artwork4.jpg" alt="画作4" class="artwork-image">
+                </div>
+                <div class="artwork-card" data-image="images/artworks/artwork5.jpg">
+                    <img src="images/artworks/artwork5.jpg" alt="画作5" class="artwork-image">
+                </div>
+                <div class="artwork-card" data-image="images/artworks/artwork6.jpg">
+                    <img src="images/artworks/artwork6.jpg" alt="画作6" class="artwork-image">
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- 音乐播放器 -->
     <section id="music" class="section" role="region" aria-labelledby="music-title">
         <div class="container">
@@ -169,33 +268,6 @@
         </div>
     </section>
 
-    <!-- 画作展示 -->
-    <section id="artworks" class="section" role="region" aria-labelledby="artworks-title">
-        <div class="container">
-            <h2 id="artworks-title" class="section-title">我的画作</h2>
-            <div class="gallery">
-                <div class="artwork-card" data-image="images/artworks/artwork1.jpg">
-                    <img src="images/artworks/artwork1.jpg" alt="画作1" class="artwork-image">
-                </div>
-                <div class="artwork-card" data-image="images/artworks/artwork2.jpg">
-                    <img src="images/artworks/artwork2.jpg" alt="画作2" class="artwork-image">
-                </div>
-                <div class="artwork-card" data-image="images/artworks/artwork3.jpg">
-                    <img src="images/artworks/artwork3.jpg" alt="画作3" class="artwork-image">
-                </div>
-                <div class="artwork-card" data-image="images/artworks/artwork4.jpg">
-                    <img src="images/artworks/artwork4.jpg" alt="画作4" class="artwork-image">
-                </div>
-                <div class="artwork-card" data-image="images/artworks/artwork5.jpg">
-                    <img src="images/artworks/artwork5.jpg" alt="画作5" class="artwork-image">
-                </div>
-                <div class="artwork-card" data-image="images/artworks/artwork6.jpg">
-                    <img src="images/artworks/artwork6.jpg" alt="画作6" class="artwork-image">
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- 弹出层 -->
     <div class="modal">
         <span class="close-button">&times;</span>
@@ -219,11 +291,36 @@
         <span>↑</span>
     </div>
 
-    <script src="https://cdn.bootcdn.net/ajax/libs/Swiper/10.0.0/swiper-bundle.min.js"></script>
+    <!-- Coze 聊天机器人 -->
+    <script src="https://lf-cdn.coze.cn/obj/unpkg/flow-platform/chat-app-sdk/1.1.0-beta.0/libs/cn/index.js"></script>
     <script>
-        window.addEventListener('load', function() {
+        new CozeWebSDK.WebChatClient({
+            config: {
+                bot_id: '7450888243903758386',
+                container: '#chat-container',
+            },
+            componentProps: {
+                title: 'Coze',
+                width: '350px',
+                height: '600px',
+                borderRadius: '12px',
+                position: 'fixed',
+                bottom: '20px',
+                right: '20px',
+                zIndex: 1000,
+                themeColor: '#ff6b6b',
+                placeholder: '和豆包聊天...',
+                showToggleButton: true,
+                showHeader: true,
+            },
+        });
+    </script>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/Swiper/8.4.5/swiper-bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
             // 轮播图初始化
-            new Swiper('.swiper', {
+            const swiper = new Swiper('.swiper', {
                 loop: true,
                 autoplay: {
                     delay: 3000,
@@ -237,9 +334,11 @@
                     nextEl: '.swiper-button-next',
                     prevEl: '.swiper-button-prev',
                 },
+                speed: 500,
+                grabCursor: true
             });
         });
     </script>
-    <script src="main.js"></script>
+    <script src="main.js" defer></script>
 </body>
 </html> 

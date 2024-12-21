@@ -1,233 +1,231 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // 音乐播放器
-    const audioPlayer = document.getElementById('audio-player');
-    const playlistItems = document.querySelectorAll('.playlist-item');
-
-    // 设置第一首歌为激活状态
-    if (playlistItems.length > 0) {
-        playlistItems[0].classList.add('active');
-    }
-
-    // 播放列表点击事件
-    playlistItems.forEach(item => {
-        item.addEventListener('click', function() {
-            playlistItems.forEach(i => i.classList.remove('active'));
-            this.classList.add('active');
-            const src = this.getAttribute('data-src');
-            audioPlayer.src = src;
-            audioPlayer.play();
-        });
-    });
-
-    // 自动播放下一首
-    audioPlayer.addEventListener('ended', function() {
-        const currentItem = document.querySelector('.playlist-item.active');
-        const nextItem = currentItem.nextElementSibling;
-        
-        if (nextItem) {
-            nextItem.click();
-        } else {
-            playlistItems[0].click();
-        }
-    });
-
-    // 画作弹窗
-    const modal = document.querySelector('.modal');
-    const modalImg = modal.querySelector('img');
-    const closeButton = modal.querySelector('.close-button');
-    const artworkCards = document.querySelectorAll('.artwork-card');
-
-    artworkCards.forEach(card => {
-        card.addEventListener('click', () => {
-            const imageSrc = card.getAttribute('data-image');
-            modalImg.src = imageSrc;
-            modal.classList.add('active');
-        });
-    });
-
-    closeButton.addEventListener('click', () => {
-        modal.classList.remove('active');
-    });
-
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.remove('active');
-        }
-    });
-
-    // 平滑滚动
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const targetId = this.getAttribute('href');
-            const targetElement = document.querySelector(targetId);
-            
-            if (targetElement) {
-                // 获取导航栏高度
-                const navHeight = document.querySelector('.header').offsetHeight;
-                
-                // 获取目标元素的位置
-                const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset;
-                
-                // 滚动到目标位置，考虑导航栏高度
-                window.scrollTo({
-                    top: targetPosition - navHeight,
-                    behavior: 'smooth'
-                });
-                
-                // 更新 URL
-                history.pushState(null, '', targetId);
-            }
-        });
-    });
-
-    // 返回顶部按钮
-    const backToTop = document.querySelector('.back-to-top');
-
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 300) {
-            backToTop.classList.add('show');
-        } else {
-            backToTop.classList.remove('show');
-        }
-    });
-
-    backToTop.addEventListener('click', () => {
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
-    });
-
-    // 主题切换
-    const themeToggle = document.getElementById('themeToggle');
-    const themeIcon = themeToggle.querySelector('i');
-
-    // 检查本地存储中的主题设置
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        updateThemeIcon(savedTheme);
-    }
-
-    themeToggle.addEventListener('click', () => {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-        updateThemeIcon(newTheme);
-    });
-
-    function updateThemeIcon(theme) {
-        themeIcon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-    }
-
-    // 加载动
-    window.addEventListener('load', () => {
-        const loader = document.querySelector('.loader');
-        requestAnimationFrame(() => {
-            loader.classList.add('fade-out');
-            setTimeout(() => {
-                loader.style.display = 'none';
-            }, 300);
-        });
-    });
-
-    // 图片预加载
-    function preloadImages() {
-        // 只预加载首屏关键图片
-        const criticalImages = [
-            'images/dbLogo.png',
-            'images/slides/轮播图1.jpg'
-        ];
-
-        criticalImages.forEach(src => {
-            const img = new Image();
-            img.src = src;
-        });
-    }
-
-    window.addEventListener('load', preloadImages);
-
-    // 页面加载时检查 URL 中的锚点
-    window.addEventListener('load', () => {
-        if (window.location.hash) {
-            const targetElement = document.querySelector(window.location.hash);
-            if (targetElement) {
-                setTimeout(() => {
-                    const navHeight = document.querySelector('.header').offsetHeight;
-                    const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset;
-                    window.scrollTo({
-                        top: targetPosition - navHeight,
-                        behavior: 'smooth'
-                    });
-                }, 100);
-            }
-        }
-    });
-
-    // 添加页面滚动监听，显示动画
-    const sections = document.querySelectorAll('.section');
-    const observerOptions = {
-        root: null,
-        rootMargin: '0px',
-        threshold: 0.1
+    // 缓存常用DOM元素
+    const elements = {
+        audioPlayer: document.getElementById('audio-player'),
+        playlistItems: document.querySelectorAll('.playlist-item'),
+        modal: document.querySelector('.modal'),
+        modalImg: document.querySelector('.modal img'),
+        closeButton: document.querySelector('.close-button'),
+        artworkCards: document.querySelectorAll('.artwork-card'),
+        backToTop: document.querySelector('.back-to-top'),
+        themeToggle: document.getElementById('themeToggle'),
+        themeIcon: document.querySelector('#themeToggle i'),
+        navLinks: document.querySelectorAll('.nav-item a'),
+        sections: document.querySelectorAll('section[id]'),
+        gameLinks: document.querySelectorAll('.game-link')
     };
 
-    const sectionObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-            }
-        });
-    }, observerOptions);
-
-    sections.forEach(section => {
-        sectionObserver.observe(section);
-    });
-
-    // 导航栏激活状态
-    function updateActiveNav() {
-        const sections = document.querySelectorAll('section[id]');
-        const navLinks = document.querySelectorAll('.nav-item a');
-        
-        sections.forEach(section => {
-            const sectionTop = section.offsetTop - 100;
-            const sectionHeight = section.offsetHeight;
-            const scrollPosition = window.scrollY;
+    // 主题切换功能
+    const themeManager = {
+        init() {
+            // 设置初始主题
+            this.setAutoTheme();
             
-            if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
-                const currentId = section.getAttribute('id');
-                navLinks.forEach(link => {
-                    link.classList.remove('active');
-                    if (link.getAttribute('href') === `#${currentId}`) {
-                        link.classList.add('active');
+            // 每分钟检查一次时间
+            setInterval(() => this.setAutoTheme(), 60000);
+
+            // 添加主题切换事件监听
+            elements.themeToggle.addEventListener('click', () => {
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                localStorage.setItem('userSetTheme', 'true');
+                this.updateThemeIcon(newTheme);
+            });
+        },
+
+        updateThemeIcon(theme) {
+            elements.themeIcon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        },
+
+        setAutoTheme() {
+            // 如果用户手动设置过主题，则不自动切换
+            if (localStorage.getItem('userSetTheme')) {
+                return;
+            }
+            
+            const hour = new Date().getHours();
+            const theme = (hour >= 6 && hour < 18) ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', theme);
+            this.updateThemeIcon(theme);
+            localStorage.setItem('theme', theme);
+        },
+        
+        setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            this.updateThemeIcon(theme);
+            localStorage.setItem('theme', theme);
+        }
+    };
+
+    // 工具函数
+    const utils = {
+        throttle: (func, limit) => {
+            let inThrottle;
+            return function(...args) {
+                if (!inThrottle) {
+                    func.apply(this, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, limit);
+                }
+            }
+        },
+        
+        debounce: (func, wait) => {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        },
+        
+        updateBackToTop: () => {
+            if (window.scrollY > 300) {
+                elements.backToTop.classList.add('show');
+            } else {
+                elements.backToTop.classList.remove('show');
+            }
+        }
+    };
+
+    // 事件处理函数
+    const handlers = {
+        handlePlaylistClick: (item) => {
+            elements.playlistItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            const src = item.getAttribute('data-src');
+            elements.audioPlayer.src = src;
+            elements.audioPlayer.play();
+        },
+        
+        handleArtworkClick: (card) => {
+            const imageSrc = card.getAttribute('data-image');
+            elements.modalImg.src = imageSrc;
+            elements.modal.classList.add('active');
+        },
+        
+        handleGameClick: (link) => {
+            const gameUrl = link.getAttribute('href');
+            window.open(gameUrl, '_blank', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');
+        }
+    };
+
+    // 性能监控
+    const performance = {
+        logTiming: () => {
+            if (window.performance) {
+                const timing = performance.timing;
+                const loadTime = timing.loadEventEnd - timing.navigationStart;
+                console.log(`页面加载时间: ${loadTime}ms`);
+            }
+        },
+        
+        observeElements: () => {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
                     }
                 });
-            }
-        });
-    }
+            });
+            
+            elements.sections.forEach(section => observer.observe(section));
+        }
+    };
 
-    window.addEventListener('scroll', updateActiveNav);
-    window.addEventListener('load', updateActiveNav);
-
-    // 小红书 iframe 加载处理
-    const xhsIframe = document.querySelector('.xhs-iframe');
-    if (xhsIframe) {
-        xhsIframe.addEventListener('load', function() {
-            this.classList.add('loaded');
-        });
-    }
-
-    // 游戏链接处理
-    const gameLinks = document.querySelectorAll('.game-link');
-    
-    gameLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
+    // 事件委托
+    document.addEventListener('click', (e) => {
+        const playlistItem = e.target.closest('.playlist-item');
+        const artworkCard = e.target.closest('.artwork-card');
+        const gameLink = e.target.closest('.game-link');
+        
+        if (playlistItem) handlers.handlePlaylistClick(playlistItem);
+        if (artworkCard) handlers.handleArtworkClick(artworkCard);
+        if (gameLink) {
             e.preventDefault();
-            const gameUrl = this.getAttribute('href');
-            window.open(gameUrl, '_blank', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');
-        });
+            handlers.handleGameClick(gameLink);
+        }
     });
+
+    // 优化滚动事件处理
+    window.addEventListener('scroll', utils.throttle(() => {
+        updateActiveNav();
+        utils.updateBackToTop();
+    }, 100));
+
+    // 初始化
+    const init = () => {
+        if (elements.playlistItems.length > 0) {
+            elements.playlistItems[0].classList.add('active');
+        }
+        
+        // 初始化主题管理器
+        themeManager.init();
+        
+        performance.observeElements();
+        lazyLoadImages();
+        
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(initNonCriticalFeatures);
+        } else {
+            setTimeout(initNonCriticalFeatures, 200);
+        }
+    };
+
+    // 启动应用
+    init();
+
+    // 资源加载管理
+    const resourceLoader = {
+        // 非关键资源列表
+        nonCriticalResources: [
+            { type: 'style', url: 'https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css' },
+            { type: 'script', url: 'path/to/analytics.js' }
+        ],
+  
+        // 加载单个资源
+        loadResource(resource) {
+            return new Promise((resolve, reject) => {
+                try {
+                    if (resource.type === 'style') {
+                        const link = document.createElement('link');
+                        link.rel = 'stylesheet';
+                        link.href = resource.url;
+                        link.onload = resolve;
+                        link.onerror = reject;
+                        document.head.appendChild(link);
+                    } else if (resource.type === 'script') {
+                        const script = document.createElement('script');
+                        script.src = resource.url;
+                        script.async = true;
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.body.appendChild(script);
+                    }
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        },
+  
+        // 加载所有非关键资源
+        loadAll() {
+            const loadPromises = this.nonCriticalResources.map(resource => 
+                this.loadResource(resource)
+                    .catch(error => console.warn(`Failed to load ${resource.url}:`, error))
+            );
+            
+            return Promise.all(loadPromises);
+        }
+    };
+
+    // 使用 requestIdleCallback 延迟加载非关键资源
+    if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => resourceLoader.loadAll());
+    } else {
+        setTimeout(() => resourceLoader.loadAll(), 1000);
+    }
 });
