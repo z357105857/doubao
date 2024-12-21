@@ -79,7 +79,7 @@ body::before {
     top: 0;
     z-index: 1000;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    height: auto;
+    height: 60px;
 }
 
 .nav {
@@ -196,7 +196,7 @@ body::before {
 /* 首页轮播图特殊样式 */
 #home.section {
     padding: 0;
-    margin-top: 100px; /* 调整顶部间距 */
+    margin-top: 60px;
 }
 
 .section-title {
@@ -212,8 +212,8 @@ body::before {
 /* 轮播图样式 */
 .swiper {
     width: 100%;
-    height: 500px;
-    margin-top: -60px;
+    height: 600px;
+    margin-top: 0;
 }
 
 .swiper-slide {
@@ -227,6 +227,7 @@ body::before {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center;
     display: block;
 }
 
@@ -737,6 +738,8 @@ audio {
         width: 100%;
         padding: 0;
         background: rgba(var(--card-bg-rgb), 0.98);
+        height: auto;
+        z-index: 1000;
     }
 
     .nav {
@@ -793,12 +796,22 @@ audio {
     #home.section {
         margin-top: 120px;
         padding: 0;
+        position: relative;
+        z-index: 1;
     }
 
     .swiper {
-        height: 200px;
+        height: 56.25vw;
         margin-top: 0;
-        border-radius: 0;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .swiper-slide img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
     }
 
     .container {
@@ -825,7 +838,7 @@ audio {
     }
 }
 
-/* 小屏幕设备 */
+/* 超小屏幕设备优化 */
 @media (max-width: 480px) {
     .nav-list {
         grid-template-columns: repeat(3, 1fr);
@@ -840,11 +853,12 @@ audio {
     }
 
     #home.section {
-        padding-top: 140px;
+        margin-top: 110px;
     }
 
     .swiper {
-        height: 200px;
+        height: 56.25vw;
+        min-height: 200px;
     }
 
     .xhs-iframe-container {
@@ -876,11 +890,12 @@ audio {
     }
 
     #home.section {
-        padding-top: 100px;
+        margin-top: 100px;
     }
 
     .swiper {
-        height: 250px;
+        height: 42.85vw;
+        max-height: 300px;
     }
 
     .xhs-iframe-container {
