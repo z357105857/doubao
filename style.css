@@ -1,21 +1,25 @@
+/* 重置默认样式 */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+/* 定义亮色主题变量 */
 :root {
-    --bg-color: #f5f5f5;
-    --text-color: #333;
-    --card-bg: #fff;
-    --header-bg: #fff;
-    --shadow: rgba(0,0,0,0.1);
-    --hover-color: #ff6b6b;
+    --bg-color: #f5f5f5;          /* 背景色 */
+    --text-color: #333;           /* 文字颜色 */
+    --card-bg: #fff;              /* 卡片背景色 */
+    --header-bg: #fff;            /* 头部背景色 */
+    --shadow: rgba(0,0,0,0.1);    /* 阴影颜色 */
+    --hover-color: #ff6b6b;       /* 悬停颜色 */
+    /* 树叶背景图案 SVG */
     --bg-pattern: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50"><path fill="%23e8e8e8" d="M25,0 C30,10 40,15 50,15 C40,15 30,20 25,30 C20,20 10,15 0,15 C10,15 20,10 25,0 Z M25,20 C27,25 32,27 37,27 C32,27 27,29 25,34 C23,29 18,27 13,27 C18,27 23,25 25,20 Z"/></svg>');
-    --card-bg-rgb: 255, 255, 255;
-    --card-opacity: 0.95;
+    --card-bg-rgb: 255, 255, 255; /* 卡片背景RGB值 */
+    --card-opacity: 0.95;         /* 卡片透明度 */
 }
 
+/* 定义暗色主题变量 */
 [data-theme="dark"] {
     --bg-color: #1a1a1a;
     --text-color: #fff;
@@ -23,11 +27,13 @@
     --header-bg: #2d2d2d;
     --shadow: rgba(255,255,255,0.1);
     --hover-color: #ff8585;
+    /* 暗色主题树叶背景 */
     --bg-pattern: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50"><path fill="%23252525" d="M25,0 C30,10 40,15 50,15 C40,15 30,20 25,30 C20,20 10,15 0,15 C10,15 20,10 25,0 Z M25,20 C27,25 32,27 37,27 C32,27 27,29 25,34 C23,29 18,27 13,27 C18,27 23,25 25,20 Z"/></svg>');
     --card-bg-rgb: 45, 45, 45;
     --card-opacity: 0.9;
 }
 
+/* 基础页面样式 */
 body {
     font-family: 'Microsoft YaHei', sans-serif;
     background-color: var(--bg-color);
@@ -39,6 +45,7 @@ body {
     min-height: 100vh;
 }
 
+/* 容器样式 */
 .container {
     max-width: 1200px;
     margin: 0 auto;
