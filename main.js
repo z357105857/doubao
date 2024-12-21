@@ -105,6 +105,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const imageSrc = card.getAttribute('data-image');
             elements.modalImg.src = imageSrc;
             elements.modal.classList.add('active');
+            document.body.style.overflow = 'hidden';  // 禁止背景滚动
+        },
+        
+        handleModalClose: () => {
+            elements.modal.classList.remove('active');
+            elements.modalImg.src = '';
+            document.body.style.overflow = '';  // 恢复背景滚动
         },
         
         handleGameClick: (link) => {
@@ -144,9 +151,19 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (playlistItem) handlers.handlePlaylistClick(playlistItem);
         if (artworkCard) handlers.handleArtworkClick(artworkCard);
+        if (e.target.classList.contains('modal') || e.target.classList.contains('close-button')) {
+            handlers.handleModalClose();
+        }
         if (gameLink) {
             e.preventDefault();
             handlers.handleGameClick(gameLink);
+        }
+    });
+
+    // 添加 ESC 键关闭功能
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && elements.modal.classList.contains('active')) {
+            handlers.handleModalClose();
         }
     });
 
@@ -228,4 +245,9 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         setTimeout(() => resourceLoader.loadAll(), 1000);
     }
+
+    // 防止图片点击关闭
+    elements.modalImg.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
 });

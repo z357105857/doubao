@@ -259,7 +259,7 @@ body::before {
     background: var(--hover-color);
 }
 
-/* 游��卡片样式 */
+/* 游戏卡片样式 */
 .games-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -467,9 +467,10 @@ audio {
     width: 100%;
     height: 100%;
     background: rgba(0,0,0,0.9);
-    z-index: 1000;
+    z-index: 2000;
     justify-content: center;
     align-items: center;
+    cursor: pointer;
 }
 
 .modal.active {
@@ -477,14 +478,19 @@ audio {
 }
 
 .modal-content {
+    position: relative;
     max-width: 90%;
     max-height: 90%;
+    background: transparent;
 }
 
 .modal-content img {
     max-width: 100%;
     max-height: 90vh;
     object-fit: contain;
+    display: block;
+    border-radius: 8px;
+    pointer-events: none;
 }
 
 .close-button {
@@ -492,8 +498,35 @@ audio {
     top: 20px;
     right: 20px;
     color: #fff;
-    font-size: 30px;
+    font-size: 24px;
     cursor: pointer;
+    background: rgba(0, 0, 0, 0.5);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 2001;
+}
+
+.close-button:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: scale(1.1);
+}
+
+/* 移动端弹出层样式优化 */
+@media (max-width: 768px) {
+    .close-button {
+        top: -50px;
+        right: 0;
+    }
+
+    .modal-content {
+        max-width: 95%;
+        margin: 0 10px;
+    }
 }
 
 /* 页脚样式 */
@@ -684,7 +717,7 @@ audio {
     height: 20px;
 }
 
-/* 响应式设计 */
+/* 响应���设计 */
 @media (max-width: 768px) {
     .about-header {
         flex-direction: column;
