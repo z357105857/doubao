@@ -1,0 +1,1804 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF转换工具 - 豆包不是干粮</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/fontawesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/solid.min.css">
+    <script>
+        // 定义库的URL映射
+        const libraries = {
+            'pdf': 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js',
+            'pdfjs': 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js',
+            'pdfjs-worker': 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js',
+            'zip': 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+            'paddle': 'https://cdn.jsdelivr.net/npm/@paddlejs-models/ocr@2.0.3/dist/index.min.js'
+        };
+        
+        // 加载脚本函数
+        function loadScript(url) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+        
+        // 加载库函数
+        async function loadLibrary(type) {
+            if (!libraries[type]) {
+                throw new Error(`未知的库类型: ${type}`);
+            }
+            if (!window[type]) {
+                await loadScript(libraries[type]);
+            }
+            return window[type];
+        }
+
+        // 添加文档转换器类
+        class DocumentConverter {
+            constructor() {
+                this.progressBar = null;
+                this.initialized = false;
+            }
+
+            async init() {
+                if (this.initialized) return;
+
+                // 加载基础库
+                await Promise.all([
+                    loadLibrary('pdf'),
+                    loadLibrary('pdfjs'),
+                    loadLibrary('pdfjs-worker'),
+                    loadLibrary('zip')
+                ]);
+
+                // 设置PDF.js worker
+                const pdfjsLib = window['pdfjs-dist/build/pdf'];
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+
+                this.initialized = true;
+            }
+
+            setProgressBar(progressBar) {
+                this.progressBar = progressBar;
+            }
+
+            // 通用的PDF页面渲染函数
+            async renderPdfPage(page, scale = 2.0) {
+                const viewport = page.getViewport({ scale });
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                await page.render({
+                    canvasContext: ctx,
+                    viewport,
+                    background: 'white',
+                    intent: 'print'
+                }).promise;
+
+                return canvas;
+            }
+
+            // 通用的文本提取函数
+            async extractText(page) {
+                const textContent = await page.getTextContent();
+                const viewport = page.getViewport({ scale: 1.0 });
+
+                // 按行组织文本
+                const lines = {};
+                textContent.items.forEach(item => {
+                    const y = Math.round(item.transform[5]);
+                    if (!lines[y]) lines[y] = [];
+                    lines[y].push({
+                        text: item.str,
+                        x: item.transform[4],
+                        fontSize: Math.sqrt(item.transform[0] * item.transform[0] + item.transform[1] * item.transform[1])
+                    });
+                });
+
+                // 排序并合并文本
+                return Object.keys(lines)
+                    .sort((a, b) => b - a)
+                    .map(y => lines[y].sort((a, b) => a.x - b.x).map(item => item.text).join(''))
+                    .join('\n');
+            }
+
+            // 通用的图像处理函数
+            async processImage(canvas, format = 'png', quality = 1.0) {
+                return new Promise((resolve, reject) => {
+                    try {
+                        canvas.toBlob(blob => {
+                            if (blob) resolve(blob);
+                            else reject(new Error('图像处理失败'));
+                        }, `image/${format}`, quality);
+                    } catch (error) {
+                        reject(error);
+                    }
+                });
+            }
+
+            // 清理Canvas内存
+            cleanupCanvas(canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                canvas.width = 0;
+                canvas.height = 0;
+            }
+
+            // 更新进度
+            updateProgress(current, total, message) {
+                if (this.progressBar) {
+                    this.progressBar.update(current / total, null, message);
+                }
+            }
+        }
+
+        // 创建转换器实例
+        const converter = new DocumentConverter();
+
+        // 添加Mammoth.js用于文档格式化
+        async function loadMammoth() {
+            if (!window.mammoth) {
+                await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.0/mammoth.browser.min.js');
+            }
+        }
+
+        // 添加百度OCR API配置
+        const BAIDU_OCR_CONFIG = {
+            API_KEY: 'your_api_key',
+            SECRET_KEY: 'your_secret_key',
+            API_URL: 'https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic'
+        };
+
+        // 获取百度OCR访问令牌
+        async function getBaiduToken() {
+            const response = await fetch(`https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${BAIDU_OCR_CONFIG.API_KEY}&client_secret=${BAIDU_OCR_CONFIG.SECRET_KEY}`);
+            const data = await response.json();
+            return data.access_token;
+        }
+
+        // 使用百度OCR识别图片文字
+        async function recognizeWithBaiduOCR(imageBase64) {
+            const token = await getBaiduToken();
+            const response = await fetch(`${BAIDU_OCR_CONFIG.API_URL}?access_token=${token}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `image=${encodeURIComponent(imageBase64.split(',')[1])}`
+            });
+            const result = await response.json();
+            return result.words_result.map(item => item.words).join('\n');
+        }
+
+        // 添加PaddleOCR-js库
+        await loadScript('https://cdn.jsdelivr.net/npm/@paddlejs-models/ocr@latest/dist/index.min.js');
+
+        // 添加有道OCR配置
+        const YOUDAO_OCR_CONFIG = {
+            APP_KEY: 'your_app_key',
+            APP_SECRET: 'your_app_secret',
+            API_URL: 'https://openapi.youdao.com/ocrapi'
+        };
+
+        // 使用有道OCR识别
+        async function recognizeWithYoudaoOCR(imageBase64) {
+            // ... 实现有道OCR API调用 ...
+        }
+
+        // 添加重试函数
+        async function retryOperation(operation, maxRetries = 3) {
+            let lastError;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    return await operation();
+                } catch (error) {
+                    lastError = error;
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+                }
+            }
+            throw lastError;
+        }
+
+        // 在OCR识别时使用重试机制
+        const result = await retryOperation(() => paddleOCR.predict(canvas));
+
+        // 添加资源加载检查
+        async function checkResources() {
+            const resources = [
+                'https://paddlejs.bj.bcebos.com/models/OCR/ch_PP-OCRv3_det_infer.onnx',
+                'https://paddlejs.bj.bcebos.com/models/OCR/ch_PP-OCRv3_rec_infer.onnx',
+                'https://paddlejs.bj.bcebos.com/models/OCR/ppocr_keys_v1.txt'
+            ];
+            
+            await Promise.all(resources.map(url => 
+                fetch(url, { method: 'HEAD' }).catch(error => {
+                    throw new Error(`资源加载失败: ${url}`);
+                })
+            ));
+        }
+
+        // 在初始化PaddleOCR之前检查资源
+        await checkResources();
+    </script>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --primary-rgb: 52, 152, 219;
+            --text-color: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --border-color: #e9ecef;
+            --button-bg: var(--primary-color);
+            --button-hover-bg: #2980b9;
+            --button-shadow: rgba(52, 152, 219, 0.3);
+        }
+
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            color: var(--text-color);
+            background: var(--bg-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: var(--text-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .main-container {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 上传区域样式 */
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 15px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--card-bg);
+            position: relative;
+            overflow: hidden;
+            margin-top: 2rem;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background: rgba(var(--primary-rgb), 0.05);
+        }
+
+        .upload-area.drag-over {
+            border-color: var(--primary-color);
+            background: rgba(var(--primary-rgb), 0.1);
+        }
+
+        .upload-area i {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .upload-tip {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            max-width: 80%;
+            margin: 0.5rem auto;
+            line-height: 1.5;
+        }
+
+        /* 转换选项样式 */
+        .convert-options {
+            padding: 1.5rem;
+            background: var(--bg-color);
+            border-radius: 10px;
+            margin-bottom: 2rem;
+        }
+
+        .option-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .option-item {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .option-item:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .option-item.active {
+            background: rgba(var(--primary-rgb), 0.1);
+            border-color: var(--primary-color);
+        }
+
+        .option-item i {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        /* 预览和结果样式 */
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .preview-item {
+            display: flex;
+            flex-direction: column;
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 1rem;
+            position: relative;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .preview-info {
+            margin-top: 0.5rem;
+        }
+
+        .file-name {
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .remove-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff4444;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .remove-btn:hover {
+            background: rgba(255, 0, 0, 0.2);
+            transform: scale(1.1);
+        }
+
+        /* 转换按钮样式 */
+        .convert-btn {
+            background: var(--button-bg);
+            color: white;
+            border: none;
+            padding: 1rem 3rem;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            box-shadow: 0 4px 15px var(--button-shadow);
+            margin: 2rem auto;
+        }
+
+        .convert-btn:hover {
+            background: var(--button-hover-bg);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--button-shadow);
+        }
+
+        .convert-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* 结果区域样式 */
+        .result-section {
+            margin-top: 3rem;
+        }
+
+        .result-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .result-header h3 {
+            font-size: 1.5rem;
+            margin: 0;
+            padding: 0;
+        }
+
+        .result-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .result-item {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            align-items: center;
+            padding: 1rem;
+            background: var(--card-bg);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* 下载按钮样式 */
+        .download-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+            font-size: 0.9rem;
+            min-width: 80px;
+            justify-content: center;
+        }
+
+        .download-btn:hover {
+            background: var(--button-hover-bg);
+            transform: translateY(-2px);
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 1rem;
+            }
+
+            .option-group {
+                grid-template-columns: 1fr;
+            }
+
+            .preview-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .convert-btn {
+                width: 100%;
+                padding: 0.8rem;
+            }
+        }
+
+        /* 预览缩略图样式 */
+        .preview-thumbnail {
+            width: 100%;
+            height: 120px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: var(--bg-color);
+            margin-bottom: 0.5rem;
+        }
+
+        /* 结果预览样式 */
+        .result-preview {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+        }
+
+        /* 提示样式 */
+        .tooltip-success {
+            background: rgba(40, 167, 69, 0.9) !important;
+        }
+
+        .tooltip-error {
+            background: rgba(220, 53, 69, 0.9) !important;
+        }
+
+        .tooltip-info {
+            background: rgba(0, 0, 0, 0.8) !important;
+        }
+
+        /* 添加加载提示样式 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--primary-color);
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>PDF转换工具</h1>
+            <p>支持PDF与Word、图片、PPT、Excel等格式互转，支持PDF合并与拆分</p>
+        </div>
+
+        <div class="main-container">
+            <!-- 转换选项 -->
+            <div class="convert-options">
+                <h3>选择转换方式</h3>
+                <div class="option-group">
+                    <div class="option-item" data-type="pdf-to-word">
+                        <i class="fas fa-file-word"></i>
+                        <span>PDF转Word</span>
+                    </div>
+                    <div class="option-item" data-type="pdf-to-image">
+                        <i class="fas fa-file-image"></i>
+                        <span>PDF转图片</span>
+                    </div>
+                    <div class="option-item" data-type="pdf-to-ppt">
+                        <i class="fas fa-file-powerpoint"></i>
+                        <span>PDF转PPT</span>
+                    </div>
+                    <div class="option-item" data-type="pdf-to-excel">
+                        <i class="fas fa-file-excel"></i>
+                        <span>PDF转Excel</span>
+                    </div>
+                </div>
+                <div class="option-group">
+                    <div class="option-item" data-type="to-pdf">
+                        <i class="fas fa-file-pdf"></i>
+                        <span>转换为PDF</span>
+                    </div>
+                    <div class="option-item" data-type="merge-pdf">
+                        <i class="fas fa-object-group"></i>
+                        <span>合并PDF</span>
+                    </div>
+                    <div class="option-item" data-type="split-pdf">
+                        <i class="fas fa-object-ungroup"></i>
+                        <span>拆分PDF</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 上传区域 -->
+            <div class="upload-area" id="dropZone">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>点击或拖拽文件到这里</p>
+                <p class="upload-tip">支持PDF、Word、PPT、Excel文件和图片格式，可同时上传多个文件</p>
+                <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png" multiple style="display: none;">
+            </div>
+
+            <!-- 预览区域 -->
+            <div class="preview-grid" id="previewGrid"></div>
+
+            <!-- 转换按钮 -->
+            <button class="convert-btn" id="convertBtn" disabled>
+                <i class="fas fa-cog"></i>
+                <span>开始转换</span>
+            </button>
+
+            <!-- 结果区域 -->
+            <div class="result-section">
+                <div class="result-header">
+                    <h3>转换结果</h3>
+                </div>
+                <div class="result-list" id="resultList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加JavaScript代码 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const convertBtn = document.getElementById('convertBtn');
+            const resultList = document.getElementById('resultList');
+            const previewGrid = document.getElementById('previewGrid');
+            
+            let filesToProcess = [];
+            let selectedOption = null;
+            let isConverting = false;
+
+            // 错误类型定义
+            const ERROR_MESSAGES = {
+                'FILE_TYPE': '不支持的文件格式',
+                'FILE_SIZE': '文件大小超出限制',
+                'CONVERSION': '转换过程出错',
+                'NETWORK': '网络连接错误',
+                'UNKNOWN': '未知错误'
+            };
+
+            // 添加文件类型映射
+            const FILE_TYPES = {
+                'pdf-to-word': { accept: ['pdf'], output: 'word' },
+                'pdf-to-image': { accept: ['pdf'], output: 'image' },
+                'pdf-to-ppt': { accept: ['pdf'], output: 'ppt' },
+                'pdf-to-excel': { accept: ['pdf'], output: 'excel' },
+                'to-pdf': { accept: ['jpg', 'jpeg', 'png', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'], output: 'pdf' },
+                'merge-pdf': { accept: ['pdf'], output: 'pdf' },
+                'split-pdf': { accept: ['pdf'], output: 'pdf' }
+            };
+
+            // 添加文件限制配置
+            const FILE_LIMITS = {
+                maxFileSize: 50 * 1024 * 1024, // 50MB
+                maxTotalSize: 200 * 1024 * 1024, // 200MB
+                maxFiles: 10,
+                maxPdfPages: 500
+            };
+
+            // 进度显示组件
+            class ProgressBar {
+                constructor() {
+                    this.progress = 0;
+                    this.total = 0;
+                    this.currentFile = '';
+                    this.currentStep = '';
+                }
+
+                start(total, firstFile) {
+                    this.progress = 0;
+                    this.total = total;
+                    this.currentFile = firstFile;
+                    this.update();
+                }
+
+                update(increment = 0, file = null, step = null) {
+                    if (file) this.currentFile = file;
+                    if (step) this.currentStep = step;
+                    this.progress = Math.min(this.progress + increment, this.total);
+                    
+                    const percent = Math.round((this.progress / this.total) * 100);
+                    convertBtn.innerHTML = `
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>${this.currentStep || '转换中'} (${percent}%)</span>
+                    `;
+
+                    // 添加详细进度提示
+                    showTooltip(`正在处理: ${this.currentFile} - ${this.currentStep || '转换中'} (${percent}%)`, 'info');
+                }
+
+                complete() {
+                    this.progress = this.total;
+                    this.update(0, null, '完成');
+                }
+            }
+
+            const progressBar = new ProgressBar();
+
+            // 添加文件预览生成
+            async function generatePreview(file) {
+                const extension = file.name.split('.').pop().toLowerCase();
+                let previewUrl = '';
+
+                try {
+                    if (['jpg', 'jpeg', 'png'].includes(extension)) {
+                        previewUrl = URL.createObjectURL(file);
+                    } else if (extension === 'pdf') {
+                        // 延迟加载PDF.js
+                        await loadLibrary('pdfjs');
+                        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+                        const arrayBuffer = await file.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                        const page = await pdf.getPage(1);
+                        // 降低预览图质量以提高性能
+                        const viewport = page.getViewport({ scale: 0.3 });
+                        
+                        const canvas = document.createElement('canvas');
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+                        
+                        await page.render({
+                            canvasContext: canvas.getContext('2d'),
+                            viewport: viewport
+                        }).promise;
+                        
+                        previewUrl = canvas.toDataURL('image/jpeg', 0.5); // 使用JPEG格式并降低质量
+                    }
+                } catch (error) {
+                    console.error('预览生成失败:', error);
+                }
+
+                return previewUrl;
+            }
+
+            // 文件拖放处理
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('drag-over');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                handleFiles(Array.from(e.dataTransfer.files));
+            });
+
+            // 点击上传
+            dropZone.addEventListener('click', (e) => {
+                if (e.target !== fileInput) {
+                    fileInput.click();
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(Array.from(e.target.files));
+                e.target.value = '';
+            });
+
+            // 转换选项选择
+            document.querySelectorAll('.option-item').forEach(option => {
+                option.addEventListener('click', () => {
+                    document.querySelectorAll('.option-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    option.classList.add('active');
+                    selectedOption = option.dataset.type;
+                    updateConvertButton();
+                });
+            });
+
+            // 修改文件处理函数
+            async function handleFiles(files) {
+                const validExtensions = FILE_TYPES[selectedOption]?.accept || [];
+                const validFiles = [];
+                let totalSize = 0;
+
+                for (const file of files) {
+                    const extension = file.name.split('.').pop().toLowerCase();
+                    
+                    if (!validExtensions.includes(extension)) {
+                        showTooltip(`不支持${extension}格式`, 'error');
+                        continue;
+                    }
+
+                    if (file.size > FILE_LIMITS.maxFileSize) {
+                        showTooltip(`文件 ${file.name} 超过${formatFileSize(FILE_LIMITS.maxFileSize)}限制`, 'error');
+                        continue;
+                    }
+
+                    if (totalSize + file.size > FILE_LIMITS.maxTotalSize) {
+                        showTooltip(`总文件大小超过${formatFileSize(FILE_LIMITS.maxTotalSize)}限制`, 'error');
+                        break;
+                    }
+
+                    if (validFiles.length >= FILE_LIMITS.maxFiles) {
+                        showTooltip(`最多只能选择${FILE_LIMITS.maxFiles}个文件`, 'error');
+                        break;
+                    }
+
+                    totalSize += file.size;
+                    validFiles.push(file);
+                }
+
+                if (validFiles.length === 0) {
+                    showTooltip(`请上传${validExtensions.join('、')}格式的文件`, 'error');
+                    return;
+                }
+
+                filesToProcess = validFiles;
+                updatePreviews();
+                updateConvertButton();
+                await converter.init();  // 确保转换器已初始化
+            }
+
+            // 修改预览更新函数
+            async function updatePreviews() {
+                previewGrid.innerHTML = '';
+                for (let i = 0; i < filesToProcess.length; i++) {
+                    const file = filesToProcess[i];
+                    const previewUrl = await generatePreview(file);
+                    const preview = document.createElement('div');
+                    preview.className = 'preview-item';
+                    preview.innerHTML = `
+                        ${previewUrl ? `<img src="${previewUrl}" class="preview-thumbnail" alt="${file.name}">` : ''}
+                        <div class="preview-info">
+                            <div class="file-name" title="${file.name}">${file.name}</div>
+                            <div>${formatFileSize(file.size)}</div>
+                        </div>
+                        <button class="remove-btn" data-index="${i}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+
+                    preview.querySelector('.remove-btn').addEventListener('click', () => {
+                        filesToProcess = filesToProcess.filter((_, idx) => idx !== i);
+                        if (previewUrl && !previewUrl.startsWith('data:')) {
+                            URL.revokeObjectURL(previewUrl);
+                        }
+                        updatePreviews();
+                        updateConvertButton();
+                    });
+
+                    previewGrid.appendChild(preview);
+                }
+            }
+
+            // 更新转换按钮状态
+            function updateConvertButton() {
+                convertBtn.disabled = !selectedOption || filesToProcess.length === 0 || isConverting;
+            }
+
+            // 文件大小格式化
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            // 提示信息显示
+            function showTooltip(message, type = 'info') {
+                const tooltip = document.createElement('div');
+                tooltip.className = `tooltip tooltip-${type}`;
+                tooltip.textContent = message;
+                tooltip.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: ${type === 'error' ? 'rgba(255, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.8)'};
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 20px;
+                    font-size: 14px;
+                    z-index: 1000;
+                `;
+                document.body.appendChild(tooltip);
+                setTimeout(() => {
+                    tooltip.remove();
+                }, 3000);
+            }
+
+            // 添加进度显示
+            function updateProgress(current, total, message = '') {
+                const percent = Math.round((current / total) * 100);
+                convertBtn.innerHTML = `
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>${message || '转换中'} (${percent}%)</span>
+                `;
+            }
+
+            // 改进错误处理
+            function handleError(error, context = '') {
+                console.error(`${context}错误:`, error);
+                let message = ERROR_MESSAGES[error.code] || error.message || ERROR_MESSAGES.UNKNOWN;
+                showTooltip(`${context}: ${message}`);
+            }
+
+            // 添加加载提示
+            function showLoading(message = '加载中...') {
+                const overlay = document.createElement('div');
+                overlay.className = 'loading-overlay';
+                overlay.innerHTML = `
+                    <div>
+                        <div class="loading-spinner"></div>
+                        <div style="margin-top: 1rem;">${message}</div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+                return () => overlay.remove();
+            }
+
+            // 修改转换按钮点击事件
+            convertBtn.addEventListener('click', async () => {
+                if (isConverting || !selectedOption || filesToProcess.length === 0) return;
+                
+                try {
+                    isConverting = true;
+                    updateConvertButton();
+                    converter.setProgressBar(progressBar);
+                    progressBar.start(filesToProcess.length, filesToProcess[0].name);
+                    
+                    // 根据选择的功能加载所需库
+                    const libraryMap = {
+                        'pdf-to-word': ['pdfjs'],
+                        'pdf-to-image': ['pdfjs'],
+                        'pdf-to-ppt': ['pdfjs'],
+                        'pdf-to-excel': ['pdfjs'],
+                        'to-pdf': ['pdf'],
+                        'merge-pdf': ['pdf'],
+                        'split-pdf': ['pdf']
+                    };
+
+                    const requiredLibraries = libraryMap[selectedOption] || [];
+                    for (const lib of requiredLibraries) {
+                        await loadLibrary(lib);
+                    }
+
+                    // 清空结果列表
+                    resultList.innerHTML = '';
+                    
+                    // 检查PDF页数限制
+                    if (['merge-pdf', 'split-pdf'].includes(selectedOption)) {
+                        let totalPages = 0;
+                        for (const file of filesToProcess) {
+                            const pdf = await PDFLib.PDFDocument.load(await file.arrayBuffer());
+                            totalPages += pdf.getPageCount();
+                            if (totalPages > FILE_LIMITS.maxPdfPages) {
+                                throw new Error(`PDF总页数超过${FILE_LIMITS.maxPdfPages}页限制`);
+                            }
+                        }
+                    }
+
+                    // 根据选择的转换类型处理文件
+                    switch (selectedOption) {
+                        case 'pdf-to-word':
+                            await convertPdfToWord();
+                            break;
+                        case 'pdf-to-image':
+                            await convertPdfToImage();
+                            break;
+                        case 'pdf-to-ppt':
+                            await convertPdfToPpt();
+                            break;
+                        case 'pdf-to-excel':
+                            await convertPdfToExcel();
+                            break;
+                        case 'to-pdf':
+                            await convertToPdf();
+                            break;
+                        case 'merge-pdf':
+                            await mergePdf();
+                            break;
+                        case 'split-pdf':
+                            await splitPdf();
+                            break;
+                    }
+                    
+                    showTooltip('转换完成', 'success');
+                    progressBar.complete();
+                } catch (error) {
+                    handleError(error, '转换失败');
+                } finally {
+                    isConverting = false;
+                    convertBtn.innerHTML = '<i class="fas fa-cog"></i><span>开始转换</span>';
+                    updateConvertButton();
+                }
+            });
+
+            // 修改添加结果项函数
+            async function addResultItem(fileName, blob) {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
+               
+                // 生成预览
+                let previewHtml = '';
+                if (blob.type.startsWith('image/')) {
+                    const url = URL.createObjectURL(blob);
+                    previewHtml = `<img src="${url}" class="result-preview" alt="${fileName}">`;
+                } else if (blob.type === 'application/pdf') {
+                    const url = URL.createObjectURL(blob);
+                    previewHtml = `<iframe src="${url}#toolbar=0" class="result-preview"></iframe>`;
+                }
+
+                resultItem.innerHTML = `
+                    ${previewHtml}
+                    <div class="file-info">
+                        <div class="file-name">${fileName}</div>
+                        <div>${formatFileSize(blob.size)}</div>
+                    </div>
+                    <button class="download-btn">
+                        <i class="fas fa-download"></i>
+                        <span>下载</span>
+                    </button>
+                `;
+
+                resultItem.querySelector('.download-btn').addEventListener('click', () => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
+                });
+
+                resultList.appendChild(resultItem);
+            }
+
+            // PDF转Word
+            async function convertPdfToWord() {
+                try {
+                    await loadLibrary('pdfjs');
+                    await loadLibrary('pdfjs-worker');
+                    await loadLibrary('zip');
+                    
+                    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+
+                    for (const file of filesToProcess) {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                        
+                        // 创建Word文档
+                        const zip = new JSZip();
+                        let content = '';
+                        let images = [];
+                        let imageCounter = 1;
+                        
+                        // 更新进度条
+                        progressBar.start(pdf.numPages, file.name);
+                        
+                        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                            progressBar.update(pageNum / pdf.numPages, null, `正在处理第 ${pageNum}/${pdf.numPages} 页`);
+                            const page = await pdf.getPage(pageNum);
+                            
+                            // 提取文本内容
+                            const textContent = await page.getTextContent();
+                            const viewport = page.getViewport({ scale: 1.0 });
+                            
+                            // 按位置排序文本
+                            const textItems = textContent.items.sort((a, b) => {
+                                // 先按y坐标排序（从上到下）
+                                const yDiff = b.transform[5] - a.transform[5];
+                                // y坐标相同时按x坐标排序（从左到右）
+                                return yDiff !== 0 ? yDiff : a.transform[4] - b.transform[4];
+                            });
+                            
+                            // 提取图片
+                            const operatorList = await page.getOperatorList();
+                            for (let i = 0; i < operatorList.fnArray.length; i++) {
+                                if (operatorList.fnArray[i] === pdfjsLib.OPS.paintImageXObject) {
+                                    const imgData = await page.objs.get(operatorList.argsArray[i][0]);
+                                    if (imgData && imgData.data) {
+                                        const canvas = document.createElement('canvas');
+                                        canvas.width = imgData.width;
+                                        canvas.height = imgData.height;
+                                        const ctx = canvas.getContext('2d');
+                                        ctx.putImageData(new ImageData(imgData.data, imgData.width, imgData.height), 0, 0);
+                                        
+                                        // 将图片转换为base64并保存
+                                        const imgBase64 = canvas.toDataURL('image/jpeg');
+                                        const imgName = `image${imageCounter++}.jpeg`;
+                                        images.push({ name: imgName, data: imgBase64 });
+                                        content += `<w:p><w:r><w:drawing><wp:inline><wp:extent cx="${imgData.width * 9525}" cy="${imgData.height * 9525}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:blipFill><a:blip r:embed="rId${imageCounter}"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+                                    }
+                                }
+                            }
+                            
+                            // 处理文本
+                            let lastY;
+                            let paragraph = '';
+                            
+                            textItems.forEach(item => {
+                                const y = Math.round(item.transform[5]);
+                                if (lastY !== undefined && Math.abs(y - lastY) > 10) {
+                                    // 新段落
+                                    content += `<w:p><w:r><w:t>${paragraph}</w:t></w:r></w:p>`;
+                                    paragraph = '';
+                                }
+                                paragraph += item.str + ' ';
+                                lastY = y;
+                            });
+                            
+                            if (paragraph) {
+                                content += `<w:p><w:r><w:t>${paragraph}</w:t></w:r></w:p>`;
+                            }
+                            
+                            // 添加分页符
+                            if (pageNum < pdf.numPages) {
+                                content += '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+                            }
+                        }
+                        
+                        // 添加Word文档结构
+                        zip.file('[Content_Types].xml', contentTypesXml);
+                        zip.file('_rels/.rels', relsXml);
+                        zip.file('word/_rels/document.xml.rels', documentRelsXml(images));
+                        zip.file('word/document.xml', documentXml(content));
+                        
+                        // 添加图片
+                        images.forEach((img, index) => {
+                            const imageData = img.data.split(',')[1];
+                            zip.file(`word/media/${img.name}`, imageData, { base64: true });
+                        });
+                        
+                        // 生成Word文件
+                        const docxBlob = await zip.generateAsync({
+                            type: 'blob',
+                            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                            compression: 'DEFLATE'
+                        });
+                        
+                        const fileName = file.name.replace('.pdf', '.docx');
+                        addResultItem(fileName, docxBlob);
+                        progressBar.update(1, file.name, '转换完成');
+                    }
+                } catch (error) {
+                    console.error('PDF转Word失败:', error);
+                    throw new Error('PDF转Word失败: ' + error.message);
+                }
+            }
+
+            // PDF转图片
+            async function convertPdfToImage() {
+                try {
+                    await loadLibrary('pdfjs');
+                    await loadLibrary('pdfjs-worker');
+                    
+                    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+
+                    for (const file of filesToProcess) {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                        
+                        // 更新进度条总数
+                        progressBar.start(pdf.numPages, file.name);
+                        
+                        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                            progressBar.update(pageNum / pdf.numPages, null, `正在处理第 ${pageNum}/${pdf.numPages} 页`);
+                            
+                            const page = await pdf.getPage(pageNum);
+                            
+                            // 获取页面原始尺寸
+                            const originalViewport = page.getViewport({ scale: 1.0 });
+                            
+                            // 计算最佳缩放比例，确保图片清晰度
+                            // 目标DPI为300，A4页面为2480x3508像素
+                            const targetWidth = 2480;
+                            const targetHeight = 3508;
+                            const scaleX = targetWidth / originalViewport.width;
+                            const scaleY = targetHeight / originalViewport.height;
+                            const scale = Math.max(scaleX, scaleY);
+                            
+                            // 创建带缩放的视口
+                            const viewport = page.getViewport({ scale });
+                            
+                            const canvas = document.createElement('canvas');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            
+                            const ctx = canvas.getContext('2d');
+                            // 优化渲染质量设置
+                            ctx.imageSmoothingEnabled = true;
+                            ctx.imageSmoothingQuality = 'high';
+                            ctx.textBaseline = 'bottom';
+                            ctx.textAlign = 'left';
+                            
+                            // 设置白色背景
+                            ctx.fillStyle = 'white';
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            
+                            // 渲染设置
+                            const renderContext = {
+                                canvasContext: ctx,
+                                viewport: viewport,
+                                background: 'white',
+                                intent: 'print',
+                                renderInteractiveForms: true,
+                                enableWebGL: true,
+                                antialiasing: true,
+                                canvasFactory: {
+                                    create: function(width, height) {
+                                        const canvas = document.createElement('canvas');
+                                        canvas.width = width;
+                                        canvas.height = height;
+                                        return canvas;
+                                    },
+                                    reset: function(canvasAndContext, width, height) {
+                                        canvasAndContext.canvas.width = width;
+                                        canvasAndContext.canvas.height = height;
+                                    },
+                                    destroy: function(canvasAndContext) {
+                                        canvasAndContext.canvas.width = 0;
+                                        canvasAndContext.canvas.height = 0;
+                                    }
+                                }
+                            };
+                            
+                            try {
+                                await page.render(renderContext).promise;
+                                
+                                // 转换为PNG格式，使用优化的压缩设置
+                                const imageBlob = await new Promise((resolve, reject) => {
+                                    try {
+                                        canvas.toBlob(blob => {
+                                            if (blob) {
+                                                resolve(blob);
+                                            } else {
+                                                reject(new Error('图片转换失败'));
+                                            }
+                                        }, 'image/png', 1.0);
+                                    } catch (error) {
+                                        reject(error);
+                                    }
+                                });
+                                
+                                // 添加页码信息到文件名
+                                const fileName = `${file.name.replace('.pdf', '')}_page${String(pageNum).padStart(3, '0')}.png`;
+                                await addResultItem(fileName, imageBlob);
+                            } catch (error) {
+                                console.error(`处理第${pageNum}页时出错:`, error);
+                                throw new Error(`处理第${pageNum}页失败: ${error.message}`);
+                            } finally {
+                                // 清理内存
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                canvas.width = 0;
+                                canvas.height = 0;
+                            }
+                            
+                            // 等待一小段时间，避免内存占用过高
+                            await new Promise(resolve => setTimeout(resolve, 200));
+                        }
+                        
+                        progressBar.update(1, file.name, '转换完成');
+                    }
+                } catch (error) {
+                    console.error('PDF转图片失败:', error);
+                    throw new Error('PDF转图片失败: ' + error.message);
+                }
+            }
+
+            // PDF转PPT
+            async function convertPdfToPpt() {
+                try {
+                    await loadLibrary('pdfjs');
+                    await loadLibrary('pdfjs-worker');
+                    await loadLibrary('zip');
+                    
+                    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+
+                    for (const file of filesToProcess) {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                        
+                        // 创建PPT文档
+                        const zip = new JSZip();
+                        let slideIds = '';
+                        let slideRels = '';
+                        
+                        // 添加基本文件结构
+                        zip.file('[Content_Types].xml',
+                            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                                <Default Extension="xml" ContentType="application/xml"/>
+                                <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                                <Default Extension="jpeg" ContentType="image/jpeg"/>
+                                <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+                                <Override PartName="/ppt/presProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presProps+xml"/>
+                                <Override PartName="/ppt/viewProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.viewProps+xml"/>
+                                <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+                            </Types>`
+                        );
+
+                        // 添加关系文件
+                        zip.file('_rels/.rels',
+                            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                                <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="/ppt/presentation.xml"/>
+                            </Relationships>`
+                        );
+
+                        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                            const page = await pdf.getPage(pageNum);
+                            const viewport = page.getViewport({ scale: 2.0 });
+                            
+                            const canvas = document.createElement('canvas');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            
+                            await page.render({
+                                canvasContext: canvas.getContext('2d'),
+                                viewport: viewport
+                            }).promise;
+                            
+                            const imageBlob = await new Promise(resolve => {
+                                canvas.toBlob(resolve, 'image/jpeg', 0.8);
+                            });
+                            
+                            // 添加图片
+                            const imageFileName = `ppt/media/image${pageNum}.jpeg`;
+                            zip.file(imageFileName, imageBlob);
+                            
+                            // 添加幻灯片
+                            slideIds += `<p:sldId id="${256 + pageNum}" r:id="rId${pageNum}"/>`;
+                            
+                            // 添加幻灯片文件
+                            zip.file(`ppt/slides/slide${pageNum}.xml`,
+                                `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                                <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                                      xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                                      xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+                                    <p:cSld>
+                                        <p:spTree>
+                                            <p:pic>
+                                                <p:nvPicPr>
+                                                    <p:cNvPr id="4" name="Content Placeholder 3"/>
+                                                    <p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr>
+                                                    <p:nvPr><p:ph/></p:nvPr>
+                                                </p:nvPicPr>
+                                                <p:blipFill>
+                                                    <a:blip r:embed="rId1"/>
+                                                    <a:stretch><a:fillRect/></a:stretch>
+                                                </p:blipFill>
+                                                <p:spPr>
+                                                    <a:xfrm>
+                                                        <a:off x="0" y="0"/>
+                                                        <a:ext cx="9144000" cy="6858000"/>
+                                                    </a:xfrm>
+                                                    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+                                                </p:spPr>
+                                            </p:pic>
+                                        </p:spTree>
+                                    </p:cSld>
+                                </p:sld>`
+                            );
+
+                            // 添加幻灯片关系文件
+                            zip.file(`ppt/slides/_rels/slide${pageNum}.xml.rels`,
+                                `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                                    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image${pageNum}.jpeg"/>
+                                </Relationships>`
+                            );
+                        }
+
+                        // 添加演示文稿文件（移到循环后，此时slideIds已经生成）
+                        zip.file('ppt/presentation.xml',
+                            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                            <p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                                          xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                                          xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+                                <p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>
+                                <p:sldIdLst>${slideIds}</p:sldIdLst>
+                                <p:sldSz cx="9144000" cy="6858000"/>
+                                <p:notesSz cx="6858000" cy="9144000"/>
+                            </p:presentation>`
+                        );
+
+                        // 添加演示文稿关系文件
+                        zip.file('ppt/_rels/presentation.xml.rels',
+                            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                                <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
+                                ${Array.from({length: pdf.numPages}, (_, i) => 
+                                    `<Relationship Id="rId${i + 2}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${i + 1}.xml"/>`
+                                ).join('\n')}
+                            </Relationships>`
+                        );
+
+                        // 添加幻灯片母版
+                        zip.file('ppt/slideMasters/slideMaster1.xml',
+                            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                            <p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                                        xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                                        xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+                                <p:cSld>
+                                    <p:spTree>
+                                        <p:nvGrpSpPr>
+                                            <p:cNvPr id="1" name=""/>
+                                            <p:cNvGrpSpPr/>
+                                            <p:nvPr/>
+                                        </p:nvGrpSpPr>
+                                        <p:grpSpPr/>
+                                    </p:spTree>
+                                </p:cSld>
+                                <p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+                            </p:sldMaster>`
+                        );
+
+                        // 添加幻灯片母版关系文件
+                        zip.file('ppt/slideMasters/_rels/slideMaster1.xml.rels',
+                            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                                <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/>
+                            </Relationships>`
+                        );
+
+                        // 添加主题文件
+                        zip.file('ppt/theme/theme1.xml',
+                            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                            <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Office Theme">
+                                <a:themeElements>
+                                    <a:clrScheme name="Office">
+                                        <a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1>
+                                        <a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>
+                                        <a:dk2><a:srgbClr val="1F497D"/></a:dk2>
+                                        <a:lt2><a:srgbClr val="EEECE1"/></a:lt2>
+                                        <a:accent1><a:srgbClr val="4F81BD"/></a:accent1>
+                                        <a:accent2><a:srgbClr val="C0504D"/></a:accent2>
+                                        <a:accent3><a:srgbClr val="9BBB59"/></a:accent3>
+                                        <a:accent4><a:srgbClr val="8064A2"/></a:accent4>
+                                        <a:accent5><a:srgbClr val="4BACC6"/></a:accent5>
+                                        <a:accent6><a:srgbClr val="F79646"/></a:accent6>
+                                        <a:hlink><a:srgbClr val="0000FF"/></a:hlink>
+                                        <a:folHlink><a:srgbClr val="800080"/></a:folHlink>
+                                    </a:clrScheme>
+                                    <a:fontScheme name="Office">
+                                        <a:majorFont><a:latin typeface="Calibri"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont>
+                                        <a:minorFont><a:latin typeface="Calibri"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont>
+                                    </a:fontScheme>
+                                    <a:fmtScheme name="Office">
+                                        <a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst>
+                                        <a:lnStyleLst><a:ln w="6350" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln></a:lnStyleLst>
+                                        <a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst>
+                                        <a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst>
+                                    </a:fmtScheme>
+                                </a:themeElements>
+                            </a:theme>`
+                        );
+
+                        // 生成PPT文件
+                        const pptBlob = await zip.generateAsync({
+                            type: 'blob',
+                            mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                            compression: 'DEFLATE'
+                        });
+                        
+                        const fileName = file.name.replace('.pdf', '.pptx');
+                        addResultItem(fileName, pptBlob);
+                    }
+                } catch (error) {
+                    console.error('PDF转PPT失败:', error);
+                    throw new Error('PDF转PPT失败: ' + error.message);
+                }
+            }
+
+            // PDF转Excel
+            async function convertPdfToExcel() {
+                try {
+                    await loadLibrary('pdfjs');
+                    await loadLibrary('pdfjs-worker');
+                    await loadLibrary('zip');
+                    
+                    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+
+                    for (const file of filesToProcess) {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                        
+                        // 创建Excel文档
+                        const zip = new JSZip();
+                        
+                        // 添加必要的Excel文件
+                        zip.file('[Content_Types].xml',
+                            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                                <Default Extension="xml" ContentType="application/xml"/>
+                                <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                                <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+                                <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+                                <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+                            </Types>`
+                        );
+                        
+                        zip.file('_rels/.rels',
+                            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                                <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+                            </Relationships>`
+                        );
+                        
+                        zip.file('xl/_rels/workbook.xml.rels',
+                            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                                <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+                                <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                            </Relationships>`
+                        );
+                        
+                        zip.file('xl/styles.xml',
+                            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                            <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+                                <fonts count="1">
+                                    <font>
+                                        <sz val="11"/>
+                                        <name val="Calibri"/>
+                                    </font>
+                                </fonts>
+                                <fills count="1">
+                                    <fill>
+                                        <patternFill patternType="none"/>
+                                    </fill>
+                                </fills>
+                                <borders count="1">
+                                    <border>
+                                        <left/><right/><top/><bottom/><diagonal/>
+                                    </border>
+                                </borders>
+                                <cellStyleXfs count="1">
+                                    <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
+                                </cellStyleXfs>
+                                <cellXfs count="1">
+                                    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+                                </cellXfs>
+                            </styleSheet>`
+                        );
+
+                        let sheetData = '';
+                        let rowCount = 1;
+                        
+                        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                            const page = await pdf.getPage(pageNum);
+                            const textContent = await page.getTextContent();
+                            
+                            // 按行组织文本
+                            const lines = {};
+                            textContent.items.forEach(item => {
+                                const y = Math.round(item.transform[5]);
+                                if (!lines[y]) {
+                                    lines[y] = [];
+                                }
+                                lines[y].push({
+                                    text: item.str,
+                                    x: item.transform[4]
+                                });
+                            });
+                            
+                            // 生成Excel行
+                            Object.keys(lines)
+                                .sort((a, b) => b - a)
+                                .forEach(y => {
+                                    const cells = lines[y]
+                                        .sort((a, b) => a.x - b.x)
+                                        .map(item => `<c t="inlineStr"><is><t>${item.text.replace(/[<>&'"]/g, c => ({
+                                            '<': '&lt;',
+                                            '>': '&gt;',
+                                            '&': '&amp;',
+                                            "'": '&apos;',
+                                            '"': '&quot;'
+                                        }[c]))}</t></is></c>`)
+                                        .join('');
+                                    sheetData += `<row r="${rowCount}">${cells}</row>`;
+                                    rowCount++;
+                                });
+                        }
+                        
+                        // 添加Excel文件结构
+                        zip.file('xl/workbook.xml',
+                            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                            <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+                                     xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                                <sheets>
+                                    <sheet name="Sheet1" sheetId="1" r:id="rId1"/>
+                                </sheets>
+                            </workbook>`
+                        );
+                        
+                        zip.file('xl/worksheets/sheet1.xml',
+                            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+                                <sheetData>${sheetData}</sheetData>
+                            </worksheet>`
+                        );
+                        
+                        // 生成Excel文件
+                        const xlsxBlob = await zip.generateAsync({
+                            type: 'blob',
+                            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                            compression: 'DEFLATE'
+                        });
+                        
+                        const fileName = file.name.replace('.pdf', '.xlsx');
+                        addResultItem(fileName, xlsxBlob);
+                    }
+                } catch (error) {
+                    console.error('PDF转Excel失败:', error);
+                    throw new Error('PDF转Excel失败: ' + error.message);
+                }
+            }
+
+            // 转换为PDF
+            async function convertToPdf() {
+                try {
+                    await loadLibrary('pdf');
+                    
+                    // 加载必要的库
+                    await loadScript('https://unpkg.com/docx-preview@0.1.11/dist/docx-preview.js');
+                    await loadScript('https://unpkg.com/xlsx-populate@1.21.0/browser/xlsx-populate.min.js');
+                    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pptxjs/1.21.1/pptxjs.min.js');
+                    
+                    for (const file of filesToProcess) {
+                        const extension = file.name.split('.').pop().toLowerCase();
+                        const pdfDoc = await PDFLib.PDFDocument.create();
+                        
+                        if (['jpg', 'jpeg', 'png'].includes(extension)) {
+                            // 图片转PDF
+                            const image = await createImageBitmap(file);
+                            const page = pdfDoc.addPage([image.width, image.height]);
+                            const jpgImage = await pdfDoc.embedJpg(await file.arrayBuffer());
+                            page.drawImage(jpgImage, {
+                                x: 0,
+                                y: 0,
+                                width: image.width,
+                                height: image.height,
+                            });
+                        } else if (['doc', 'docx'].includes(extension)) {
+                            // 使用docx-preview转换Word
+                            const container = document.createElement('div');
+                            container.style.width = '612px';
+                            container.style.height = '792px';
+                            container.style.overflow = 'hidden';
+                            document.body.appendChild(container);
+                            
+                            await docx.renderAsync(await file.arrayBuffer(), container, null, {
+                                ignoreWidth: false,
+                                ignoreHeight: false,
+                                ignoreFonts: false,
+                                breakPages: true,
+                                experimental: true
+                            });
+                            
+                            // 将每一页转换为PDF页面
+                            const pages = container.querySelectorAll('.docx-page');
+                            for (const page of pages) {
+                                const pageWidth = 612;
+                                const pageHeight = 792;
+                                const pdfPage = pdfDoc.addPage([pageWidth, pageHeight]);
+                                
+                                // 使用SVG渲染页面内容
+                                const svgData = await convertPageToSVG(page);
+                                const image = await pdfDoc.embedSvg(svgData);
+                                
+                                pdfPage.drawSvg(svgData, {
+                                    x: 0,
+                                    y: 0,
+                                    width: pageWidth,
+                                    height: pageHeight
+                                });
+                            }
+                            
+                            document.body.removeChild(container);
+                        } else if (['xls', 'xlsx'].includes(extension)) {
+                            // 使用xlsx-populate处理Excel
+                            const workbook = await XlsxPopulate.fromDataAsync(await file.arrayBuffer());
+                            
+                            for (const sheet of workbook.sheets()) {
+                                const usedRange = sheet.usedRange();
+                                if (!usedRange) continue;
+                                
+                                const { _start: start, _end: end } = usedRange;
+                                const pageWidth = 612;
+                                const pageHeight = 792;
+                                const pdfPage = pdfDoc.addPage([pageWidth, pageHeight]);
+                                
+                                // 绘制表格
+                                for (let row = start.row; row <= end.row; row++) {
+                                    for (let col = start.column; col <= end.column; col++) {
+                                        const cell = sheet.cell(row, col);
+                                        const value = cell.value();
+                                        if (value !== null && value !== undefined) {
+                                            const style = cell.style();
+                                            // 处理单元格样式和内容
+                                            // ...
+                                        }
+                                    }
+                                }
+                            }
+                        } else if (['ppt', 'pptx'].includes(extension)) {
+                            // 使用pptxjs处理PPT
+                            const pptx = new PptxJs();
+                            await pptx.load(await file.arrayBuffer());
+                            
+                            const slides = await pptx.getSlides();
+                            for (const slide of slides) {
+                                const pageWidth = 960;
+                                const pageHeight = 720;
+                                const pdfPage = pdfDoc.addPage([pageWidth, pageHeight]);
+                                
+                                // 渲染幻灯片内容
+                                const svgData = await slide.toSVG();
+                                pdfPage.drawSvg(svgData, {
+                                    x: 0,
+                                    y: 0,
+                                    width: pageWidth,
+                                    height: pageHeight
+                                });
+                            }
+                        } else {
+                            throw new Error('暂不支持该格式转换为PDF');
+                        }
+                        
+                        const pdfBytes = await pdfDoc.save();
+                        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                        addResultItem(file.name.replace(/\.[^/.]+$/, '.pdf'), blob);
+                    }
+                } catch (error) {
+                    console.error('转换PDF失败:', error);
+                    throw new Error('转换PDF失败: ' + error.message);
+                }
+            }
+
+            // 辅助函数：将DOM元素转换为SVG
+            async function convertPageToSVG(element) {
+                const serializer = new XMLSerializer();
+                const clone = element.cloneNode(true);
+                const svgWrapper = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svgWrapper.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+                svgWrapper.setAttribute('width', '612');
+                svgWrapper.setAttribute('height', '792');
+                
+                // 将所有样式转换为内联样式
+                const styles = window.getComputedStyle(element);
+                const foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+                foreignObject.setAttribute('width', '100%');
+                foreignObject.setAttribute('height', '100%');
+                foreignObject.appendChild(clone);
+                svgWrapper.appendChild(foreignObject);
+                
+                return serializer.serializeToString(svgWrapper);
+            }
+        });
+    </script>
+</body>
+</html>

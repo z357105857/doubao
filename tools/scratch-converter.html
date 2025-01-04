@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scratch项目转换工具 - 豆包不是干粮</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4D97FF;
+            --primary-dark: #3373CC;
+            --primary-rgb: 77, 151, 255;
+            --button-bg: linear-gradient(45deg, #4D97FF, #3373CC);
+            --button-hover-bg: linear-gradient(45deg, #3373CC, #2855A3);
+            --text-color: #333;
+            --text-secondary: #666;
+            --bg-color: #f5f5f5;
+            --card-bg: #fff;
+            --border-color: #e0e0e0;
+            --button-shadow: rgba(77, 151, 255, 0.3);
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #4D97FF;
+            --primary-dark: #3373CC;
+            --text-color: #fff;
+            --text-secondary: #aaa;
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --border-color: #404040;
+            --button-shadow: rgba(77, 151, 255, 0.2);
+        }
+
+        .tool-page {
+            background: var(--bg-color);
+            min-height: 100vh;
+            padding-top: 100px;
+            padding-bottom: 2rem;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: var(--card-bg);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .tool-container {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            margin-top: 2rem;
+        }
+
+        /* 标题样式统一 */
+        .section-title {
+            text-align: center;
+            color: var(--text-color);
+            font-size: 2rem;
+            margin: 0 0 2rem 0;
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 3px;
+            background: var(--primary-color);
+            margin: 1rem auto;
+            border-radius: 2px;
+        }
+
+        /* 上传区域样式 */
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 15px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--card-bg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background: rgba(var(--primary-rgb), 0.05);
+        }
+
+        .upload-area.drag-over {
+            border-color: var(--primary-color);
+            background: rgba(var(--primary-rgb), 0.1);
+        }
+
+        /* 隐藏文件输入框但保持可访问性 */
+        .upload-area input[type="file"] {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        /* 按钮统一样式 */
+        .convert-btn,
+        .download-btn,
+        .action-btn {
+            background: var(--button-bg);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            text-decoration: none;
+            box-shadow: 0 4px 15px var(--button-shadow);
+        }
+
+        .convert-btn:hover,
+        .download-btn:hover,
+        .action-btn:hover {
+            background: var(--button-hover-bg);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--button-shadow);
+        }
+
+        /* 禁用状态按钮样式 */
+        .convert-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* 设置面板样式 */
+        .settings-panel {
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: var(--bg-color);
+            border-radius: 15px;
+        }
+
+        .setting-item {
+            margin-bottom: 1.5rem;
+        }
+
+        .setting-item label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        .setting-item select,
+        .setting-item input[type="text"] {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .setting-item select:focus,
+        .setting-item input[type="text"]:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
+        }
+
+        /* 文件信息显示 */
+        .file-info {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: var(--bg-color);
+            border-radius: 10px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        /* 转换进度 */
+        .progress-container {
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .progress-container.show {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar-inner {
+            height: 100%;
+            background: var(--primary-color);
+            width: 0;
+            transition: width 0.3s ease;
+        }
+
+        /* 转换状态提示 */
+        .status-text {
+            text-align: center;
+            margin: 1rem 0;
+            color: var(--text-secondary);
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .tool-container {
+                padding: 1rem;
+            }
+
+            .settings-panel {
+                padding: 1rem;
+            }
+        }
+
+        /* 工具提示样式 */
+        .tooltip {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="scroll-progress"></div>
+    <header class="header">
+        <nav class="nav">
+            <div class="logo">
+                <a href="../index.html">
+                    <img src="../images/dbLogo.png" alt="豆包的头像">
+                    <span class="logo-text">豆包不是干粮</span>
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="tool-page">
+        <div class="container">
+            <h1 class="section-title">Scratch项目转换工具</h1>
+            
+            <!-- 添加提示信息 -->
+            <div class="notice" style="
+                background: rgba(var(--primary-rgb), 0.1);
+                border-left: 4px solid var(--primary-color);
+                padding: 1rem;
+                margin-bottom: 1rem;
+                border-radius: 4px;
+                color: var(--text-color);">
+                <p style="margin: 0;">
+                    <i class="fas fa-info-circle"></i>
+                    提示：本工具需要在Web服务器环境下运行。如果你是直接打开HTML文件，文件上传功能将无法使用。
+                </p>
+                <p style="margin: 0.5rem 0 0 0; font-size: 0.9em; color: var(--text-secondary);">
+                    请通过以下方式之一使用本工具：
+                </p>
+                <ul style="margin: 0.5rem 0 0 1.5rem; font-size: 0.9em; color: var(--text-secondary);">
+                    <li>将网站部署到服务器上访问</li>
+                    <li>使用本地服务器（如 Visual Studio Code 的 Live Server 插件）</li>
+                    <li>使用 Python 的简单 HTTP 服务器：在命令行中进入网站目录，运行 <code style="background: rgba(0,0,0,0.1); padding: 2px 4px; border-radius: 3px;">python -m http.server</code></li>
+                </ul>
+            </div>
+
+            <div class="tool-container">
+                <div class="upload-area" id="dropZone">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>点击或拖拽Scratch项目文件到这里</p>
+                    <p class="upload-tip">支持.sb3格式文件</p>
+                    <input type="file" id="fileInput" accept=".sb3" style="display: none;">
+                </div>
+
+                <div class="file-info" id="fileInfo">
+                    <div class="file-name"></div>
+                    <div class="file-size"></div>
+                </div>
+
+                <div class="settings-panel">
+                    <div class="setting-item">
+                        <label for="projectTitle">项目标题</label>
+                        <input type="text" id="projectTitle" placeholder="输入项目标题">
+                    </div>
+                    <div class="setting-item">
+                        <label for="autoStart">自动开始</label>
+                        <select id="autoStart">
+                            <option value="true">是</option>
+                            <option value="false">否</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="fullscreen">全屏按钮</label>
+                        <select id="fullscreen">
+                            <option value="true">显示</option>
+                            <option value="false">隐藏</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar">
+                        <div class="progress-bar-inner"></div>
+                    </div>
+                    <div class="status-text">准备转换...</div>
+                </div>
+
+                <div class="button-container" style="text-align: center; margin-top: 2rem;">
+                    <button class="convert-btn" id="convertBtn" disabled>
+                        <i class="fas fa-magic"></i>
+                        开始转换
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const convertBtn = document.getElementById('convertBtn');
+            const fileInfo = document.getElementById('fileInfo');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.querySelector('.progress-bar-inner');
+            const statusText = document.querySelector('.status-text');
+            
+            let selectedFile = null;
+
+            // 拖放功能
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('drag-over');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                const files = e.dataTransfer.files;
+                handleFile(files[0]);
+            });
+
+            // 点击上传
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFile(e.target.files[0]);
+            });
+
+            function handleFile(file) {
+                if (!file) return;
+                
+                if (!file.name.endsWith('.sb3')) {
+                    showTooltip('请上传.sb3格式的Scratch项目文件');
+                    return;
+                }
+
+                selectedFile = file;
+                convertBtn.disabled = false;
+                
+                // 显示文件信息
+                fileInfo.querySelector('.file-name').textContent = `文件名：${file.name}`;
+                fileInfo.querySelector('.file-size').textContent = `大小：${formatFileSize(file.size)}`;
+                fileInfo.classList.add('show');
+
+                // 自动填充项目标题
+                document.getElementById('projectTitle').value = file.name.replace('.sb3', '');
+            }
+
+            convertBtn.addEventListener('click', async () => {
+                if (!selectedFile) return;
+
+                try {
+                    progressContainer.classList.add('show');
+                    convertBtn.disabled = true;
+                    updateProgress(0, '正在读取项目文件...');
+
+                    // 读取文件内容
+                    const fileContent = await readFileAsArrayBuffer(selectedFile);
+                    updateProgress(30, '正在解析项目...');
+
+                    // 获取设置
+                    const settings = {
+                        title: document.getElementById('projectTitle').value || selectedFile.name.replace('.sb3', ''),
+                        autoStart: document.getElementById('autoStart').value === 'true',
+                        fullscreen: document.getElementById('fullscreen').value === 'true'
+                    };
+
+                    // 转换为HTML
+                    updateProgress(60, '正在生成HTML...');
+                    const html = await generateHTML(fileContent, settings);
+
+                    // 创建下载
+                    updateProgress(90, '准备下载...');
+                    const blob = new Blob([html], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `${settings.title}.html`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+
+                    updateProgress(100, '转换完成！');
+                    showTooltip('转换成功！');
+
+                } catch (error) {
+                    console.error('转换失败:', error);
+                    showTooltip('转换失败: ' + error.message);
+                    updateProgress(0, '转换失败');
+                } finally {
+                    convertBtn.disabled = false;
+                }
+            });
+
+            function readFileAsArrayBuffer(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+
+            async function generateHTML(fileContent, settings) {
+                try {
+                    // 使用分块处理来转换大文件
+                    function arrayBufferToBase64(buffer) {
+                        const bytes = new Uint8Array(buffer);
+                        const chunkSize = 0x8000; // 每次处理32KB
+                        let binary = '';
+                        
+                        for (let i = 0; i < bytes.length; i += chunkSize) {
+                            const chunk = bytes.slice(i, i + chunkSize);
+                            binary += String.fromCharCode.apply(null, chunk);
+                        }
+                        
+                        return btoa(binary);
+                    }
+
+                    const base64 = arrayBufferToBase64(fileContent);
+                    
+                    const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${settings.title}</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            background: #000;
+        }
+        iframe { 
+            border: none; 
+            width: 100vw; 
+            height: 100vh; 
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <iframe src="https://turbowarp.org/embed?autoplay=${settings.autoStart}&fps=30&turbo=false&username=player#${base64}"></iframe>
+</body>
+</html>`;
+
+                    return html;
+                } catch (error) {
+                    throw new Error('生成HTML失败: ' + error.message);
+                }
+            }
+
+            function updateProgress(percent, status) {
+                progressBar.style.width = `${percent}%`;
+                statusText.textContent = status;
+            }
+
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            function showTooltip(message) {
+                const tooltip = document.createElement('div');
+                tooltip.className = 'tooltip';
+                tooltip.textContent = message;
+                document.body.appendChild(tooltip);
+                
+                setTimeout(() => {
+                    tooltip.style.opacity = '1';
+                }, 10);
+                
+                setTimeout(() => {
+                    tooltip.style.opacity = '0';
+                    setTimeout(() => {
+                        document.body.removeChild(tooltip);
+                    }, 300);
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
