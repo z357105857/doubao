@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MP3音频转换工具 - 豆包不是干粮</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <style>
+        /* 主题变量 */
+        :root {
+            --primary-color: #ff5722;
+            --primary-dark: #e64a19;
+            --primary-rgb: 255, 87, 34;
+            --button-bg: linear-gradient(45deg, #ff5722, #f4511e);
+            --button-hover-bg: linear-gradient(45deg, #f4511e, #e64a19);
+            --text-color: #333;
+            --text-secondary: #666;
+            --bg-color: #f5f5f5;
+            --card-bg: #fff;
+            --border-color: #e0e0e0;
+            --button-shadow: rgba(255, 87, 34, 0.3);
+        }
+
+        /* 暗色主题 */
+        [data-theme="dark"] {
+            --primary-color: #ff5722;
+            --primary-dark: #e64a19;
+            --text-color: #fff;
+            --text-secondary: #aaa;
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --border-color: #404040;
+            --button-shadow: rgba(255, 87, 34, 0.2);
+        }
+
+        /* 页面整体风格 */
+        .tool-page {
+            background: var(--bg-color);
+            min-height: 100vh;
+            padding-top: 100px;
+            padding-bottom: 2rem;
+        }
+
+        /* 上传区域样式 */
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 15px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--card-bg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background: rgba(var(--primary-rgb), 0.05);
+        }
+
+        .upload-area.drag-over {
+            border-color: var(--primary-color);
+            background: rgba(var(--primary-rgb), 0.1);
+        }
+
+        /* 文件列表样式 */
+        .file-list {
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .file-item {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 1rem;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .file-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        /* 转换设置面板 */
+        .convert-settings {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .setting-item {
+            margin-bottom: 1.5rem;
+        }
+
+        .setting-item label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        /* 滑块样式 */
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--primary-color);
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* 按钮样式 */
+        .convert-btn,
+        .download-btn {
+            background: var(--button-bg);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px var(--button-shadow);
+        }
+
+        .convert-btn:hover,
+        .download-btn:hover {
+            background: var(--button-hover-bg);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--button-shadow);
+        }
+
+        .convert-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* 进度条样式 */
+        .progress-container {
+            width: 100%;
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary-color);
+            width: 0;
+            transition: width 0.3s ease;
+        }
+
+        /* 结果区域样式 */
+        .result-area {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .result-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        /* 工具提示样式 */
+        .tooltip {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+
+        /* 工具栏样式 */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .toolbar-stats {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        /* 统计项样式 */
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+            color: var(--text-secondary);
+        }
+
+        .stat-item i {
+            color: var(--primary-color);
+        }
+
+        /* 清空按钮样式 */
+        .clear-btn {
+            background: linear-gradient(45deg, #ff5252, #ff1744);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 8px rgba(255, 23, 68, 0.3);
+            white-space: nowrap;
+        }
+
+        .clear-btn:hover {
+            background: linear-gradient(45deg, #ff1744, #d50000);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 23, 68, 0.4);
+        }
+
+        .clear-btn i {
+            font-size: 0.9rem;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .toolbar-stats {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .stat-item {
+                justify-content: space-between;
+                padding: 0.5rem;
+                background: var(--card-bg);
+                border-radius: 8px;
+                border: 1px solid var(--border-color);
+            }
+
+            .clear-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="scroll-progress"></div>
+    <header class="header">
+        <nav class="nav">
+            <div class="logo">
+                <a href="../index.html">
+                    <img src="../images/dbLogo.png" alt="豆包的头像">
+                    <span class="logo-text">豆包不是干粮</span>
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="tool-page">
+        <div class="container">
+            <h1 class="section-title">MP3音频转换工具</h1>
+            <div class="tool-container">
+                <div class="toolbar">
+                    <div class="toolbar-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-music"></i>
+                            <span>已选择:</span>
+                            <span><span id="selectedCount">0</span> 个文件</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-hdd"></i>
+                            <span>总大小:</span>
+                            <span id="totalSize">0 MB</span>
+                        </div>
+                    </div>
+                    <button class="clear-btn" id="clearAll">
+                        <i class="fas fa-trash-alt"></i>
+                        <span>清空全部</span>
+                    </button>
+                </div>
+
+                <div class="upload-area" id="dropZone">
+                    <i class="fas fa-music" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 1rem;"></i>
+                    <p>点击或拖拽音频文件到这里</p>
+                    <p class="upload-tip">支持FLAC、WAV、OGG、M4A等格式，可同时上传多个文件批量转换</p>
+                    <input type="file" id="fileInput" accept=".flac,.wav,.ogg,.m4a,.aac,.wma,.mp3" multiple style="display: none;">
+                </div>
+
+                <div class="convert-settings" id="settingsPanel" style="display: none;">
+                    <h3 style="margin-top: 0; color: var(--text-color);">转换设置</h3>
+                    
+                    <div class="setting-item">
+                        <label>MP3比特率</label>
+                        <input type="range" id="bitrateSlider" min="64" max="320" value="192" step="32">
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+                            <span style="color: var(--text-secondary);">64 kbps</span>
+                            <span id="bitrateValue" style="color: var(--primary-color);">192 kbps</span>
+                            <span style="color: var(--text-secondary);">320 kbps</span>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="keepMetadata" checked>
+                            保留音频标签信息(歌手、专辑等)
+                        </label>
+                    </div>
+
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="normalizeAudio" checked>
+                            音量标准化
+                        </label>
+                    </div>
+
+                    <button id="convertBtn" class="convert-btn" disabled>
+                        <i class="fas fa-sync-alt"></i>
+                        开始转换
+                    </button>
+                </div>
+
+                <div class="result-area" id="resultArea" style="display: none;">
+                    <h3 style="margin-top: 0; color: var(--text-color);">转换结果</h3>
+                    <div id="resultList"></div>
+                    <div style="text-align: center; margin-top: 1.5rem;">
+                        <button id="downloadAllBtn" class="download-btn" style="display: none;">
+                            <i class="fas fa-download"></i>
+                            下载全部
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 豆包不是干粮</p>
+        </div>
+    </footer>
+
+    <script>
+        // 创建 Blob URL 作为 Worker 脚本
+        const workerScript = `
+            importScripts('https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js');
+
+            self.onmessage = async function(e) {
+                const { audioData, channels, sampleRate, bitrate } = e.data;
+                
+                try {
+                    // 创建MP3编码器
+                    const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, bitrate);
+                    const mp3Data = [];
+                    const sampleBlockSize = 1152;
+                    const left = audioData[0];
+                    const right = channels === 2 ? audioData[1] : audioData[0];
+                    const totalSamples = left.length;
+
+                    // 分块处理音频数据
+                    for (let i = 0; i < totalSamples; i += sampleBlockSize) {
+                        const leftChunk = left.slice(i, i + sampleBlockSize);
+                        const rightChunk = right.slice(i, i + sampleBlockSize);
+
+                        // 转换为16位整数
+                        const leftInt = new Int16Array(leftChunk.map(n => n * 0x7FFF));
+                        const rightInt = new Int16Array(rightChunk.map(n => n * 0x7FFF));
+
+                        // 编码为MP3
+                        const mp3buf = mp3encoder.encodeBuffer(leftInt, rightInt);
+                        if (mp3buf.length > 0) {
+                            mp3Data.push(mp3buf);
+                        }
+
+                        // 每处理一块数据就发送进度更新
+                        const progress = Math.min(100, Math.round((i / totalSamples) * 100));
+                        self.postMessage({ type: 'progress', progress: progress });
+                    }
+
+                    // 完成编码
+                    const end = mp3encoder.flush();
+                    if (end.length > 0) {
+                        mp3Data.push(end);
+                    }
+
+                    // 发送100%进度
+                    self.postMessage({ type: 'progress', progress: 100 });
+                    // 发送完成消息
+                    self.postMessage({ type: 'success', data: mp3Data });
+                } catch (error) {
+                    self.postMessage({ type: 'error', error: error.message });
+                }
+            };
+        `;
+
+        const workerBlob = new Blob([workerScript], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(workerBlob);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const settingsPanel = document.getElementById('settingsPanel');
+            const convertBtn = document.getElementById('convertBtn');
+            const resultArea = document.getElementById('resultArea');
+            const resultList = document.getElementById('resultList');
+            const downloadAllBtn = document.getElementById('downloadAllBtn');
+            const bitrateSlider = document.getElementById('bitrateSlider');
+            const bitrateValue = document.getElementById('bitrateValue');
+
+            let filesToConvert = [];
+            let convertedFiles = [];
+            let isConverting = false;
+
+            // 更新比特率显示
+            bitrateSlider.addEventListener('input', function() {
+                bitrateValue.textContent = this.value + ' kbps';
+            });
+
+            // 文件拖放处理
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('drag-over');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                handleFiles(e.dataTransfer.files);
+            });
+
+            // 点击上传
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+                e.target.value = ''; // 重置input
+            });
+
+            // 文件处理
+            function handleFiles(files) {
+                const validFiles = Array.from(files).filter(file => {
+                    const validTypes = ['.flac', '.wav', '.ogg', '.m4a', '.aac', '.wma', '.mp3'];
+                    const ext = '.' + file.name.split('.').pop().toLowerCase();
+                    return validTypes.includes(ext);
+                });
+
+                if (validFiles.length === 0) {
+                    showTooltip('请上传支持的音频格式文件');
+                    return;
+                }
+
+                filesToConvert = validFiles;
+                updateFileList();
+                updateStats();
+                settingsPanel.style.display = 'block';
+                convertBtn.disabled = false;
+            }
+
+            // 更新文件列表显示
+            function updateFileList() {
+                const fileList = document.createElement('div');
+                fileList.className = 'file-list';
+
+                filesToConvert.forEach((file, index) => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <i class="fas fa-music" style="color: var(--primary-color);"></i>
+                            <div>
+                                <div style="color: var(--text-color); margin-bottom: 0.3rem;">${file.name}</div>
+                                <div style="color: var(--text-secondary); font-size: 0.9rem;">
+                                    ${formatFileSize(file.size)}
+                                </div>
+                            </div>
+                        </div>
+                        <button class="remove-btn" data-index="${index}" style="
+                            position: absolute;
+                            top: -8px;
+                            right: -8px;
+                            width: 24px;
+                            height: 24px;
+                            border-radius: 50%;
+                            background: #ff4444;
+                            color: white;
+                            border: none;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                        ">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+
+                    fileList.appendChild(fileItem);
+                });
+
+                // 替换现有的文件列表
+                const existingFileList = document.querySelector('.file-list');
+                if (existingFileList) {
+                    existingFileList.replaceWith(fileList);
+                } else {
+                    dropZone.insertAdjacentElement('afterend', fileList);
+                }
+
+                // 添加删除按钮事件
+                document.querySelectorAll('.remove-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const index = parseInt(this.dataset.index);
+                        filesToConvert = filesToConvert.filter((_, i) => i !== index);
+                        updateFileList();
+                        updateStats();
+                        convertBtn.disabled = filesToConvert.length === 0;
+                        if (filesToConvert.length === 0) {
+                            settingsPanel.style.display = 'none';
+                        }
+                    });
+                });
+            }
+
+            // 转换按钮点击事件
+            convertBtn.addEventListener('click', async () => {
+                if (isConverting || filesToConvert.length === 0) return;
+
+                try {
+                    isConverting = true;
+                    convertBtn.disabled = true;
+                    convertBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 转换中...';
+                    resultArea.style.display = 'block';
+                    resultList.innerHTML = '';
+                    convertedFiles = [];
+
+                    const bitrate = parseInt(bitrateSlider.value);
+                    const keepMetadata = document.getElementById('keepMetadata').checked;
+                    const normalizeAudio = document.getElementById('normalizeAudio').checked;
+
+                    for (let file of filesToConvert) {
+                        await convertFile(file, bitrate, keepMetadata, normalizeAudio);
+                    }
+
+                    if (convertedFiles.length > 0) {
+                        downloadAllBtn.style.display = 'inline-flex';
+                    }
+
+                } catch (error) {
+                    console.error('转换错误:', error);
+                    showTooltip('转换过程出错');
+                } finally {
+                    isConverting = false;
+                    convertBtn.disabled = false;
+                    convertBtn.innerHTML = '<i class="fas fa-sync-alt"></i> 开始转换';
+                }
+            });
+
+            // 修改文件转换函数
+            async function convertFile(file, bitrate, keepMetadata, normalizeAudio) {
+                const resultItem = createResultItem(file.name);
+                resultList.appendChild(resultItem);
+
+                try {
+                    updateConversionStatus(resultItem, '正在读取文件...');
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const arrayBuffer = await file.arrayBuffer();
+                    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+                    updateConversionStatus(resultItem, '正在处理音频...');
+                    let processedBuffer = audioBuffer;
+
+                    if (normalizeAudio) {
+                        processedBuffer = normalizeAudioBuffer(audioBuffer);
+                    }
+
+                    updateConversionStatus(resultItem, '正在转换为MP3...');
+                    
+                    // 使用Blob URL创建Worker
+                    const worker = new Worker(workerUrl);
+                    
+                    // 准备音频数据
+                    const channels = [];
+                    for (let i = 0; i < processedBuffer.numberOfChannels; i++) {
+                        channels.push(Array.from(processedBuffer.getChannelData(i)));
+                    }
+
+                    return new Promise((resolve, reject) => {
+                        worker.onmessage = function(e) {
+                            const { type, data, progress, error } = e.data;
+                            
+                            if (type === 'progress') {
+                                // 更新进度条
+                                updateConversionProgress(resultItem, progress);
+                            }
+                            else if (type === 'success') {
+                                // 确保进度条显示100%
+                                updateConversionProgress(resultItem, 100);
+                                
+                                // 处理成功的转换结果
+                                const mp3Blob = new Blob(data, { type: 'audio/mp3' });
+                                const mp3File = new File([mp3Blob], file.name.replace(/\.[^/.]+$/, '.mp3'), {
+                                    type: 'audio/mp3'
+                                });
+
+                                convertedFiles.push(mp3File);
+                                updateResultItem(resultItem, file, mp3File);
+                                updateConversionStatus(resultItem, '转换完成');
+                                worker.terminate();
+                                resolve();
+                            }
+                            else if (type === 'error') {
+                                worker.terminate();
+                                reject(new Error(error));
+                            }
+                        };
+
+                        // 发送数据到 Worker
+                        worker.postMessage({
+                            audioData: channels,
+                            channels: processedBuffer.numberOfChannels,
+                            sampleRate: processedBuffer.sampleRate,
+                            bitrate: bitrate
+                        });
+                    });
+
+                } catch (error) {
+                    console.error('文件转换错误:', error);
+                    updateConversionStatus(resultItem, '转换失败');
+                    throw error;
+                }
+            }
+
+            // 添加进度更新函数
+            function updateConversionProgress(resultItem, progress) {
+                const progressBar = resultItem.querySelector('.progress-bar');
+                const statusEl = resultItem.querySelector('.convert-status');
+                if (progressBar) {
+                    // 使用requestAnimationFrame来平滑更新进度条
+                    requestAnimationFrame(() => {
+                        progressBar.style.width = `${progress}%`;
+                        if (statusEl) {
+                            statusEl.textContent = `转换中... ${Math.round(progress)}%`;
+                        }
+                    });
+                }
+            }
+
+            // 音频标准化处理
+            function normalizeAudioBuffer(audioBuffer) {
+                const channels = [];
+                let maxPeak = 0;
+
+                // 获取所有声道数据并找到最大峰值
+                for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+                    const channel = audioBuffer.getChannelData(i);
+                    channels.push(channel);
+                    for (let j = 0; j < channel.length; j++) {
+                        maxPeak = Math.max(maxPeak, Math.abs(channel[j]));
+                    }
+                }
+
+                // 如果最大峰值太小，进行标准化
+                if (maxPeak < 0.9) {
+                    const normalizedBuffer = audioBuffer.getContext().createBuffer(
+                        audioBuffer.numberOfChannels,
+                        audioBuffer.length,
+                        audioBuffer.sampleRate
+                    );
+
+                    const amplification = 0.9 / maxPeak;
+
+                    for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+                        const normalizedChannel = normalizedBuffer.getChannelData(i);
+                        const originalChannel = channels[i];
+                        for (let j = 0; j < audioBuffer.length; j++) {
+                            normalizedChannel[j] = originalChannel[j] * amplification;
+                        }
+                    }
+
+                    return normalizedBuffer;
+                }
+
+                return audioBuffer;
+            }
+
+            // 创建结果项
+            function createResultItem(fileName) {
+                const div = document.createElement('div');
+                div.className = 'result-item';
+                div.innerHTML = `
+                    <div style="flex: 1;">
+                        <div style="color: var(--text-color); margin-bottom: 0.3rem;">${fileName}</div>
+                        <div class="file-size" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
+                        <div class="progress-container">
+                            <div class="progress-bar"></div>
+                        </div>
+                        <div class="convert-status" style="color: var(--text-secondary); font-size: 0.9rem;">
+                            等待转换...
+                        </div>
+                    </div>
+                    <button class="download-btn" style="display: none;">
+                        <i class="fas fa-download"></i>
+                        下载
+                    </button>
+                `;
+                return div;
+            }
+
+            // 更新结果项
+            function updateResultItem(resultItem, originalFile, convertedFile) {
+                const fileSize = resultItem.querySelector('.file-size');
+                const downloadBtn = resultItem.querySelector('.download-btn');
+                
+                const originalSize = formatFileSize(originalFile.size);
+                const convertedSize = formatFileSize(convertedFile.size);
+                fileSize.textContent = `${originalSize} → ${convertedSize}`;
+                
+                downloadBtn.style.display = 'inline-flex';
+                downloadBtn.addEventListener('click', () => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(convertedFile);
+                    link.download = convertedFile.name;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
+                });
+            }
+
+            // 更新转换状态
+            function updateConversionStatus(resultItem, status) {
+                const statusEl = resultItem.querySelector('.convert-status');
+                if (statusEl) {
+                    statusEl.textContent = status;
+                }
+            }
+
+            // 修改下载全部按钮事件
+            downloadAllBtn.addEventListener('click', async () => {
+                if (convertedFiles.length === 0) return;
+
+                try {
+                    showTooltip('正在打包文件...');
+                    const zip = new JSZip();
+
+                    // 创建一个音频文件夹
+                    const audioFolder = zip.folder("converted_audio");
+                    
+                    // 遍历所有转换后的文件并添加到zip中
+                    for (const file of convertedFiles) {
+                        // 读取文件内容
+                        const arrayBuffer = await file.arrayBuffer();
+                        // 将文件添加到音频文件夹中
+                        audioFolder.file(file.name, arrayBuffer);
+                    }
+
+                    // 生成zip文件
+                    const content = await zip.generateAsync({
+                        type: 'blob',
+                        compression: 'DEFLATE',
+                        compressionOptions: { level: 9 }
+                    });
+
+                    // 下载zip文件
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = 'converted_audio.zip';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
+
+                    showTooltip('下载已开始');
+                } catch (error) {
+                    console.error('打包下载错误:', error);
+                    showTooltip('下载失败: ' + error.message);
+                }
+            });
+
+            // 工具函数
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            function showTooltip(message) {
+                const tooltip = document.createElement('div');
+                tooltip.className = 'tooltip';
+                tooltip.textContent = message;
+                document.body.appendChild(tooltip);
+                
+                setTimeout(() => {
+                    tooltip.style.opacity = '0';
+                    setTimeout(() => {
+                        document.body.removeChild(tooltip);
+                    }, 300);
+                }, 3000);
+            }
+
+            // 更新统计信息
+            function updateStats() {
+                const selectedCount = document.getElementById('selectedCount');
+                const totalSize = document.getElementById('totalSize');
+                
+                selectedCount.textContent = filesToConvert.length;
+                const total = filesToConvert.reduce((acc, file) => acc + file.size, 0);
+                totalSize.textContent = formatFileSize(total);
+                
+                // 根据是否有文件更新清空按钮状态
+                const clearBtn = document.getElementById('clearAll');
+                clearBtn.style.display = filesToConvert.length > 0 ? 'flex' : 'none';
+            }
+
+            // 添加清空全部按钮事件
+            document.getElementById('clearAll').addEventListener('click', () => {
+                filesToConvert = [];
+                convertedFiles = [];
+                document.querySelector('.file-list')?.remove();
+                settingsPanel.style.display = 'none';
+                resultArea.style.display = 'none';
+                updateStats();
+                convertBtn.disabled = true;
+            });
+        });
+
+        // 页面卸载时清理Blob URL
+        window.addEventListener('unload', () => {
+            URL.revokeObjectURL(workerUrl);
+        });
+    </script>
+</body>
+</html>

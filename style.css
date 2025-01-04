@@ -211,7 +211,7 @@ body::before {
 /* 轮播图样式 */
 .swiper {
     width: 100%;
-    height: 600px;
+    height: 400px;
     margin-top: 0;
 }
 
@@ -717,7 +717,7 @@ audio {
     height: 20px;
 }
 
-/* 响应���设计 */
+/* 响应式设计 */
 @media (max-width: 768px) {
     .about-header {
         flex-direction: column;
@@ -833,7 +833,7 @@ audio {
     }
 
     .swiper {
-        height: 56.25vw;
+        height: 300px;
         margin-top: 0;
         width: 100%;
         overflow: hidden;
@@ -904,7 +904,7 @@ audio {
     }
 
     .swiper {
-        height: 56.25vw;
+        height: 200px;
         min-height: 200px;
     }
 
